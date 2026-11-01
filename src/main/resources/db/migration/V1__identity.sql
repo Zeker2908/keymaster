@@ -1,8 +1,8 @@
 CREATE TABLE principals (
-    id         uuid        PRIMARY KEY DEFAULT uuidv7(),
+    id         uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
     kind       text        NOT NULL,
     login      text        NOT NULL,
-    status     text        NOT NULL DEFAULT 'active',
+    status     text        NOT NULL DEFAULT 'ACTIVE',
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT principals_kind_chk   CHECK (kind IN ('USER', 'CLIENT')),
@@ -19,7 +19,7 @@ CREATE TABLE credentials (
 );
 
 CREATE TABLE roles (
-    id          uuid        PRIMARY KEY DEFAULT uuidv7(),
+    id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
     name        text        NOT NULL,
     description text,
     created_at  timestamptz NOT NULL DEFAULT now(),

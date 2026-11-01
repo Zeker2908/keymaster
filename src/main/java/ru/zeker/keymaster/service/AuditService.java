@@ -1,0 +1,39 @@
+package ru.zeker.keymaster.service;
+
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.smallrye.mutiny.Uni;
+import jakarta.enterprise.context.ApplicationScoped;
+import lombok.RequiredArgsConstructor;
+import ru.zeker.keymaster.domain.AuditAction;
+import ru.zeker.keymaster.domain.context.Actor;
+import ru.zeker.keymaster.domain.entity.AuditLog;
+import ru.zeker.keymaster.domain.entity.Principal;
+import ru.zeker.keymaster.repository.AuditRepository;
+
+import java.util.Map;
+
+@ApplicationScoped
+@RequiredArgsConstructor
+public class AuditService {
+
+    private final AuditRepository repository;
+    private final ObjectMapper mapper;
+
+    public Uni<Void> recordUser(Actor actor, AuditAction action, Principal principal, Map<String, ?> details) {
+        return record(actor, action, "user", principal.getId().toString(), details);
+    }
+
+    public Uni<Void> record(Actor actor, AuditAction action, String targetType,
+                            String targetId, Map<String, ?> details) {
+        AuditLog e = AuditLog.builder()
+                .actorId(actor.userId())
+                .action(action.code())
+                .targetType(targetType)
+                .targetId(targetId)
+                .details(mapper.valueToTree(details))
+                .requestId(actor.requestId())
+                .build();
+        return repository.persist(e).replaceWithVoid();
+    }
+}

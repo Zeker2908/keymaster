@@ -7,9 +7,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 import org.hibernate.proxy.HibernateProxy;
 
+import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -20,9 +22,13 @@ public abstract class BaseEntity extends PanacheEntityBase {
 
     @Id
     @GeneratedValue
-    @UuidGenerator(style = UuidGenerator.Style.TIME)
+    @UuidGenerator(style = UuidGenerator.Style.RANDOM)
     @Column(nullable = false, updatable = false)
     private UUID id;
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false)
+    private Instant createdAt;
 
     @Override
     public final boolean equals(Object o) {

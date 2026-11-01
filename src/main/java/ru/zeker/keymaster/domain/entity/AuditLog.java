@@ -7,7 +7,10 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -18,8 +21,11 @@ import java.util.UUID;
 
 @Getter
 @Setter
+@Builder
 @Entity
 @Table(name = "audit_log")
+@NoArgsConstructor
+@AllArgsConstructor
 public class AuditLog {
 
     @Id
@@ -30,20 +36,22 @@ public class AuditLog {
     @Column(nullable = false, updatable = false)
     private Instant at;
 
+    @Column(name = "actor_id")
     private UUID actorId;
 
     @Column(nullable = false)
     private String action;
 
-    @Column(nullable = false)
+    @Column(name = "target_type", nullable = false)
     private String targetType;
 
-    @Column(nullable = false)
+    @Column(name = "target_id", nullable = false)
     private String targetId;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = false)
     private JsonNode details;
 
+    @Column(name = "request_id")
     private String requestId;
 }
