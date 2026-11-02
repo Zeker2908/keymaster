@@ -1,4 +1,4 @@
-package ru.zeker.keymaster;
+package ru.zeker.keymaster.resource;
 
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;

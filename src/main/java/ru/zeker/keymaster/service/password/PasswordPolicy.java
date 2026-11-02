@@ -1,19 +1,31 @@
 package ru.zeker.keymaster.service.password;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import ru.zeker.keymaster.domain.PasswordViolation;
+import ru.zeker.keymaster.util.PasswordUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @ApplicationScoped
+@RequiredArgsConstructor
 public class PasswordPolicy {
 
     private static final int MIN_LENGTH = 15;
-    private static final int MAX_LENGTH = 128;
+    private static final int MAX_LENGTH = 64;
 
     public List<PasswordViolation> validate(String login, char[] password) {
+        char[] normalized = PasswordUtils.normalize(password);
+        try {
+            return validateNormalized(login, normalized);
+        } finally {
+            PasswordUtils.wipe(normalized);
+        }
+    }
+
+    private List<PasswordViolation> validateNormalized(String login, char[] password) {
         List<PasswordViolation> violations = new ArrayList<>();
 
         if (password.length < MIN_LENGTH) violations.add(PasswordViolation.TOO_SHORT);

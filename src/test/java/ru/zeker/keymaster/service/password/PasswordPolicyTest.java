@@ -21,8 +21,8 @@ public class PasswordPolicyTest {
     @CsvSource({
             "14, TOO_SHORT",
             "15, NONE",
-            "128, NONE",
-            "129, TOO_LONG"
+            "64, NONE",
+            "65, TOO_LONG"
     })
     void shouldValidatePasswordLength(int length, String expected) {
         List<PasswordViolation> violations = policy.validate(null, validPassword(length));

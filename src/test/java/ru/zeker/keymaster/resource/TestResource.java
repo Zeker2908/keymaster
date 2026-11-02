@@ -1,4 +1,4 @@
-package ru.zeker.keymaster;
+package ru.zeker.keymaster.resource;
 
 import io.smallrye.mutiny.Uni;
 import io.vertx.mutiny.sqlclient.Pool;

@@ -5,8 +5,11 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 
+import java.util.Optional;
+
 @ConfigMapping(prefix = "keymaster")
 public interface KeymasterConfig {
+
     @NotBlank
     String issuer();
 
@@ -15,6 +18,9 @@ public interface KeymasterConfig {
 
     @Valid
     Password password();
+
+    @Valid
+    Bootstrap bootstrap();
 
     interface Password {
         @Valid
@@ -35,6 +41,19 @@ public interface KeymasterConfig {
 
             @Positive
             int maxQueue();
+        }
+    }
+
+    interface Bootstrap {
+        @Valid
+        Admin admin();
+
+        interface Admin {
+            boolean enabled();
+
+            Optional<String> login();
+
+            Optional<String> password();
         }
     }
 }

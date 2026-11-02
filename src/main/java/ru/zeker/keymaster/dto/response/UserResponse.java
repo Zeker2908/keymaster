@@ -2,6 +2,7 @@ package ru.zeker.keymaster.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.quarkus.runtime.annotations.RegisterForReflection;
+import ru.zeker.keymaster.domain.Patterns;
 import ru.zeker.keymaster.domain.PrincipalKind;
 import ru.zeker.keymaster.domain.PrincipalStatus;
 
@@ -16,7 +17,7 @@ public record UserResponse(
         PrincipalKind kind,
         PrincipalStatus status,
         List<RoleResponse> roles,
-        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = Patterns.TIME_FORMAT, timezone = "UTC")
         Instant createdAt
 ) {
     public UserResponse {

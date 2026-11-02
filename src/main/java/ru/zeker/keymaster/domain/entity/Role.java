@@ -12,6 +12,8 @@ import lombok.Setter;
 @Table(name = "roles")
 public class Role extends BaseEntity {
 
+    public static final String ROLE_UQ = "roles_name_uq";
+
     @Column(nullable = false, unique = true, length = 64)
     private String name;
 

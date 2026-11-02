@@ -5,6 +5,7 @@ import org.mapstruct.Mapping;
 import ru.zeker.keymaster.domain.entity.Credential;
 import ru.zeker.keymaster.domain.entity.Principal;
 import ru.zeker.keymaster.domain.entity.PrincipalRole;
+import ru.zeker.keymaster.domain.entity.PrincipalRoleId;
 import ru.zeker.keymaster.domain.entity.Role;
 import ru.zeker.keymaster.dto.request.NewClientRequest;
 import ru.zeker.keymaster.dto.request.NewUserRequest;
@@ -34,7 +35,7 @@ public interface PrincipalMapper {
     @Mapping(target = "roles", source = "roles")
     UserResponse toResponse(Principal principal, List<Role> roles);
 
-    @Mapping(target = "id", expression = "java(new ru.zeker.keymaster.domain.entity.PrincipalRoleId(principal.getId(), role.getId()))")
+    @Mapping(target = "id", expression = "java(toId(principal, role))")
     @Mapping(target = "principal", source = "principal")
     @Mapping(target = "role", source = "role")
     @Mapping(target = "assignedAt", ignore = true)
@@ -47,4 +48,8 @@ public interface PrincipalMapper {
     Credential toCredential(Principal principal, String secretHash);
 
     RoleResponse toRoleResponse(Role role);
+
+    default PrincipalRoleId toId(Principal principal, Role role) {
+        return new PrincipalRoleId(principal.getId(), role.getId());
+    }
 }

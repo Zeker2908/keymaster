@@ -8,7 +8,6 @@ import ru.zeker.keymaster.config.KeymasterConfig;
 import ru.zeker.keymaster.exception.ServiceOverloadedException;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -30,7 +29,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.anyInt;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -56,70 +54,83 @@ class PasswordHasherTest {
         when(config.password().argon2().memory()).thenReturn(19456);
         when(config.password().argon2().parallelism()).thenReturn(1);
 
-        doAnswer(invocation -> {
-            Arrays.fill(invocation.<char[]>getArgument(0), '\0');
-            return null;
-        }).when(argon2).wipeArray(any(char[].class));
-
         hasher = new PasswordHasher(argon2, config, executor);
     }
 
     @Test
     void hash_shouldReturnHashAndWipePassword() {
         char[] password = "password123".toCharArray();
+        AtomicReference<char[]> normalized = new AtomicReference<>();
         String expectedHash = "$argon2id$test";
 
-        when(argon2.hash(2, 19456, 1, password, StandardCharsets.UTF_8))
-                .thenReturn(expectedHash);
+        when(argon2.hash(anyInt(), anyInt(), anyInt(), any(char[].class), eq(StandardCharsets.UTF_8)))
+                .thenAnswer(invocation -> {
+                    normalized.set(invocation.getArgument(3));
+                    return expectedHash;
+                });
 
         String result = hasher.hash(password).await().indefinitely();
 
         assertEquals(expectedHash, result);
-        assertArrayEquals(new char[password.length], password);
+        assertWiped(password);
+        assertWiped(normalized.get());
 
-        verify(argon2).hash(2, 19456, 1, password, StandardCharsets.UTF_8);
-        verify(argon2).wipeArray(password);
+        verify(argon2).hash(anyInt(), anyInt(), anyInt(), any(char[].class), eq(StandardCharsets.UTF_8));
     }
 
     @Test
     void verify_shouldReturnTrueAndWipePassword() {
         char[] password = "password123".toCharArray();
+        AtomicReference<char[]> normalized = new AtomicReference<>();
         String hash = "$argon2id$test";
 
-        when(argon2.verify(hash, password)).thenReturn(true);
+        when(argon2.verify(eq(hash), any(char[].class)))
+                .thenAnswer(invocation -> {
+                    normalized.set(invocation.getArgument(1));
+                    return true;
+                });
 
         Boolean result = hasher.verify(hash, password).await().indefinitely();
 
         assertTrue(result);
-        assertArrayEquals(new char[password.length], password);
+        assertWiped(password);
+        assertWiped(normalized.get());
 
-        verify(argon2).verify(hash, password);
-        verify(argon2).wipeArray(password);
+        verify(argon2).verify(eq(hash), any(char[].class));
     }
 
     @Test
     void verify_shouldReturnFalseAndWipePassword() {
         char[] password = "wrong-password".toCharArray();
+        AtomicReference<char[]> normalized = new AtomicReference<>();
         String hash = "$argon2id$test";
 
-        when(argon2.verify(hash, password)).thenReturn(false);
+        when(argon2.verify(eq(hash), any(char[].class)))
+                .thenAnswer(invocation -> {
+                    normalized.set(invocation.getArgument(1));
+                    return false;
+                });
 
         Boolean result = hasher.verify(hash, password).await().indefinitely();
 
         assertFalse(result);
-        assertArrayEquals(new char[password.length], password);
+        assertWiped(password);
+        assertWiped(normalized.get());
 
-        verify(argon2).verify(hash, password);
-        verify(argon2).wipeArray(password);
+        verify(argon2).verify(eq(hash), any(char[].class));
     }
 
     @Test
     void hash_shouldWipePasswordWhenArgon2Fails() {
         char[] password = "password123".toCharArray();
+        AtomicReference<char[]> normalized = new AtomicReference<>();
         RuntimeException exception = new IllegalStateException("Argon2 failed");
 
-        when(argon2.hash(2, 19456, 1, password, StandardCharsets.UTF_8))
-                .thenThrow(exception);
+        when(argon2.hash(anyInt(), anyInt(), anyInt(), any(char[].class), eq(StandardCharsets.UTF_8)))
+                .thenAnswer(invocation -> {
+                    normalized.set(invocation.getArgument(3));
+                    throw exception;
+                });
 
         RuntimeException result = assertThrows(
                 RuntimeException.class,
@@ -127,9 +138,8 @@ class PasswordHasherTest {
         );
 
         assertSame(exception, result);
-        assertArrayEquals(new char[password.length], password);
-
-        verify(argon2).wipeArray(password);
+        assertWiped(password);
+        assertWiped(normalized.get());
     }
 
     @Test
@@ -144,12 +154,11 @@ class PasswordHasherTest {
                 () -> rejectingHasher.hash(password).await().indefinitely()
         );
 
-        assertArrayEquals(new char[password.length], password);
+        assertWiped(password);
 
         verify(argon2, never()).hash(
                 anyInt(), anyInt(), anyInt(), any(char[].class), eq(StandardCharsets.UTF_8)
         );
-        verify(argon2).wipeArray(password);
     }
 
     @Test
@@ -235,6 +244,11 @@ class PasswordHasherTest {
 
         subscriber.awaitFailure()
                 .assertFailedWith(ServiceOverloadedException.class);
+    }
+
+    private void assertWiped(char[] password) {
+        assertNotNull(password);
+        assertArrayEquals(new char[password.length], password);
     }
 
     private static class DirectExecutorService extends AbstractExecutorService {

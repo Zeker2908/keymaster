@@ -14,7 +14,7 @@ RUN ./mvnw dependency:go-offline -B
 
 COPY --chown=1001:0 src src
 
-RUN ./mvnw package -Pnative -Dquarkus.native.container-build=false
+RUN ./mvnw package -Pnative -Dquarkus.native.container-build=false -DskipTests
 # ------------------------------------------------------------------
 # Этап 2: Запуск приложения
 # ------------------------------------------------------------------

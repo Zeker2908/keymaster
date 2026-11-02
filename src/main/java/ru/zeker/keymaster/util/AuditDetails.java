@@ -22,4 +22,8 @@ public final class AuditDetails {
     public static Map<String, Object> roleAssigned(Role role) {
         return Map.of("role", role.getName());
     }
+
+    public static Map<String, Object> roleRevoked(Role role) {
+        return Map.of("role", role.getName());
+    }
 }

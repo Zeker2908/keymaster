@@ -9,6 +9,7 @@ import ru.zeker.keymaster.domain.AuditAction;
 import ru.zeker.keymaster.domain.context.Actor;
 import ru.zeker.keymaster.domain.entity.AuditLog;
 import ru.zeker.keymaster.domain.entity.Principal;
+import ru.zeker.keymaster.domain.entity.Role;
 import ru.zeker.keymaster.repository.AuditRepository;
 
 import java.util.Map;
@@ -17,11 +18,18 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AuditService {
 
+    private static final String USER = "user";
+    private static final String ROLE = "role";
+
     private final AuditRepository repository;
     private final ObjectMapper mapper;
 
     public Uni<Void> recordUser(Actor actor, AuditAction action, Principal principal, Map<String, ?> details) {
-        return record(actor, action, "user", principal.getId().toString(), details);
+        return record(actor, action, USER, principal.getId().toString(), details);
+    }
+
+    public Uni<Void> recordRole(Actor actor, AuditAction action, Role role) {
+        return record(actor, action, ROLE, role.getId().toString(), Map.of());
     }
 
     public Uni<Void> record(Actor actor, AuditAction action, String targetType,

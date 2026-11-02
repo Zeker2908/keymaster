@@ -36,7 +36,7 @@ public class GlobalExceptionMapper {
                 .header(RETRY_AFTER, RETRY_AFTER_SECONDS)
                 .entity(errorResponseFactory.createBody(
                         exception.getCode().getStatus(),
-                        exception.getCode().getCode(),
+                        exception.getCode().name(),
                         exception.getMessage(),
                         exception.getDetails(),
                         uriInfo
@@ -50,7 +50,7 @@ public class GlobalExceptionMapper {
 
         return errorResponseFactory.create(
                 exception.getCode().getStatus(),
-                exception.getCode().getCode(),
+                exception.getCode().name(),
                 exception.getMessage(),
                 exception.getDetails(),
                 uriInfo

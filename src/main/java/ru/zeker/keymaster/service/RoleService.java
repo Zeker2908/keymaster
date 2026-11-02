@@ -1,13 +1,21 @@
 package ru.zeker.keymaster.service;
 
+import io.quarkus.hibernate.reactive.panache.Panache;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import ru.zeker.keymaster.domain.AuditAction;
+import ru.zeker.keymaster.domain.context.Actor;
 import ru.zeker.keymaster.domain.entity.Role;
+import ru.zeker.keymaster.dto.request.NewRoleRequest;
+import ru.zeker.keymaster.dto.response.RoleDetailsResponse;
 import ru.zeker.keymaster.exception.ErrorCode;
 import ru.zeker.keymaster.exception.KeyMasterException;
+import ru.zeker.keymaster.mapper.RoleMapper;
 import ru.zeker.keymaster.repository.RoleRepository;
+import ru.zeker.keymaster.util.ExceptionTranslator;
 
 import java.util.Collection;
 import java.util.List;
@@ -16,11 +24,31 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+@Slf4j
 @ApplicationScoped
 @RequiredArgsConstructor
-public class RoleResolver {
+public class RoleService {
 
     private final RoleRepository roles;
+    private final AuditService audits;
+    private final RoleMapper mapper;
+
+    public Uni<Role> findByName(String name) {
+        return roles.findByName(name);
+    }
+
+    public Uni<Role> lockByName(String name) {
+        return roles.lockByName(name);
+    }
+
+    public Uni<RoleDetailsResponse> create(Actor actor, NewRoleRequest request) {
+        log.info("Creating role '{}'", request.name());
+        return Panache.withTransaction(() -> roles.persist(mapper.toEntity(request))
+                .call(role -> audits.recordRole(actor, AuditAction.ROLE_CREATED, role))
+                .onFailure().transform(ExceptionTranslator::translate)
+                .map(mapper::toResponse)
+                .invoke(response -> log.info("Role '{}' created with id {}", response.name(), response.id())));
+    }
 
     public Uni<List<Role>> resolve(Collection<String> rawNames) {
         List<String> names = normalize(rawNames);

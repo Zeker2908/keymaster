@@ -7,10 +7,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.MapsId;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -21,6 +18,8 @@ import java.time.Instant;
 @Entity
 @Table(name = "principal_roles")
 public class PrincipalRole {
+
+    public static final String PRIMARY_KEY = "principal_roles_pkey";
 
     @EmbeddedId
     private PrincipalRoleId id;
