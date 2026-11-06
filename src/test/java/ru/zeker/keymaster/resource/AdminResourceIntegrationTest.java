@@ -3,15 +3,9 @@ package ru.zeker.keymaster.resource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
-import io.restassured.specification.RequestSpecification;
-import io.vertx.mutiny.sqlclient.Pool;
-import io.vertx.mutiny.sqlclient.Tuple;
-import jakarta.inject.Inject;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import ru.zeker.keymaster.IntegrationTestBase;
 
-import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -26,23 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @QuarkusTest
-class AdminResourceIntegrationTest {
-
-    private static final Duration TIMEOUT = Duration.ofSeconds(20);
-    private static final String VALID_PASSWORD = "correct-horse-1!";
-    private static final String USER_ID_HEADER = "X-User-Id";
-    private static final String USER_ROLES_HEADER = "X-User-Roles";
-
-    @Inject
-    Pool pool;
-
-    private final List<UUID> createdUsers = new ArrayList<>();
-
-    @AfterEach
-    void deleteCreatedUsers() {
-        createdUsers.forEach(this::deletePrincipal);
-        createdUsers.clear();
-    }
+class AdminResourceIntegrationTest extends IntegrationTestBase {
 
     @Test
     void requiresUserIdHeader() {
@@ -99,7 +77,7 @@ class AdminResourceIntegrationTest {
 
         assertEquals(0L, count("""
                 SELECT count(*) AS c
-                FROM keymaster.principals
+                FROM keymaster.principal
                 WHERE login = $1
                 """, login));
     }
@@ -148,21 +126,13 @@ class AdminResourceIntegrationTest {
     void createsUserWithoutRoles() {
         String login = uniqueLogin();
 
-        Response response = adminRequest()
-                .contentType(ContentType.JSON)
-                .body(Map.of(
+        postUser(Map.of(
                         "login", login,
                         "password", VALID_PASSWORD
                 ))
-                .when()
-                .post("/admin/users")
                 .then()
                 .statusCode(201)
-                .body("roles.size()", equalTo(0))
-                .extract()
-                .response();
-
-        createdUsers.add(UUID.fromString(response.jsonPath().getString("id")));
+                .body("roles.size()", equalTo(0));
     }
 
     @Test
@@ -236,7 +206,7 @@ class AdminResourceIntegrationTest {
 
         assertEquals(1L, count("""
                 SELECT count(*) AS c
-                FROM keymaster.principal_roles
+                FROM keymaster.principal_role
                 WHERE principal_id = $1
                 """, UUID.fromString(userId)));
 
@@ -276,7 +246,7 @@ class AdminResourceIntegrationTest {
 
         assertEquals(0L, count("""
                 SELECT count(*) AS c
-                FROM keymaster.principal_roles
+                FROM keymaster.principal_role
                 WHERE principal_id = $1
                 """, UUID.fromString(userId)));
 
@@ -391,24 +361,17 @@ class AdminResourceIntegrationTest {
     void rejectsParallelDuplicateLogin() throws ExecutionException, InterruptedException {
         String login = uniqueLogin();
 
-        CompletableFuture<Response> first = CompletableFuture.supplyAsync(() -> createUserRequest(login));
-        CompletableFuture<Response> second = CompletableFuture.supplyAsync(() -> createUserRequest(login));
+        CompletableFuture<Response> first = CompletableFuture.supplyAsync(() -> postUser(login, List.of()));
+        CompletableFuture<Response> second = CompletableFuture.supplyAsync(() -> postUser(login, List.of()));
 
         List<Response> responses = List.of(first.get(), second.get());
 
         assertEquals(1, responses.stream().filter(r -> r.statusCode() == 201).count());
         assertEquals(1, responses.stream().filter(r -> r.statusCode() == 409).count());
 
-        Response created = responses.stream()
-                .filter(r -> r.statusCode() == 201)
-                .findFirst()
-                .orElseThrow();
-
-        createdUsers.add(UUID.fromString(created.jsonPath().getString("id")));
-
         assertEquals(1L, count("""
             SELECT count(*) AS c
-            FROM keymaster.principals
+            FROM keymaster.principal
             WHERE login = $1
             """, login));
     }
@@ -432,7 +395,7 @@ class AdminResourceIntegrationTest {
 
         assertEquals(0L, count("""
             SELECT count(*) AS c
-            FROM keymaster.principals
+            FROM keymaster.principal
             WHERE login = $1
             """, login));
     }
@@ -481,100 +444,8 @@ class AdminResourceIntegrationTest {
 
         assertEquals(0L, count("""
             SELECT count(*) AS c
-            FROM keymaster.principals
+            FROM keymaster.principal
             WHERE login = $1
             """, login));
-    }
-
-    private Response createRole(String name) {
-        return adminRequest()
-                .contentType(ContentType.JSON)
-                .body(Map.of(
-                        "name", name,
-                        "description", "Test role"
-                ))
-                .when()
-                .post("/admin/admin/roles")
-                .then()
-                .extract()
-                .response();
-    }
-
-    private List<String> existingRoleNames(int limit) {
-        return pool.preparedQuery("""
-            SELECT name
-            FROM keymaster.roles
-            ORDER BY name
-            LIMIT $1
-            """)
-                .execute(Tuple.of(limit))
-                .map(rows -> {
-                    List<String> names = new ArrayList<>();
-                    rows.forEach(row -> names.add(row.getString("name")));
-                    return names;
-                })
-                .await().atMost(TIMEOUT);
-    }
-
-    private Response createUserRequest(String login) {
-        return adminRequest()
-                .contentType(ContentType.JSON)
-                .body(Map.of(
-                        "login", login,
-                        "password", VALID_PASSWORD,
-                        "roles", List.of()
-                ))
-                .when()
-                .post("/admin/users");
-    }
-
-    private RequestSpecification adminRequest() {
-        return adminRequest(UUID.randomUUID());
-    }
-
-    private RequestSpecification adminRequest(UUID actorId) {
-        return given()
-                .header(USER_ID_HEADER, actorId.toString())
-                .header(USER_ROLES_HEADER, "admin");
-    }
-
-    private Response createUser(List<String> roles) {
-        return createUser(uniqueLogin(), roles);
-    }
-
-    private Response createUser(String login, List<String> roles) {
-        Response response = adminRequest()
-                .contentType(ContentType.JSON)
-                .body(Map.of(
-                        "login", login,
-                        "password", VALID_PASSWORD,
-                        "roles", roles
-                ))
-                .when()
-                .post("/admin/users")
-                .then()
-                .statusCode(201)
-                .extract()
-                .response();
-
-        createdUsers.add(UUID.fromString(response.jsonPath().getString("id")));
-        return response;
-    }
-
-    private long count(String sql, Object parameter) {
-        return pool.preparedQuery(sql)
-                .execute(Tuple.of(parameter))
-                .map(rows -> rows.iterator().next().getLong("c"))
-                .await().atMost(TIMEOUT);
-    }
-
-    private void deletePrincipal(UUID principalId) {
-        pool.preparedQuery("DELETE FROM keymaster.principals WHERE id = $1")
-                .execute(Tuple.of(principalId))
-                .await().atMost(TIMEOUT);
-    }
-
-    private String uniqueLogin() {
-        return "u-" + UUID.randomUUID().toString().substring(0, 8);
     }
 }

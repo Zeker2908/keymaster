@@ -9,10 +9,10 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
-@Table(name = "roles")
+@Table(name = "role")
 public class Role extends BaseEntity {
 
-    public static final String ROLE_UQ = "roles_name_uq";
+    public static final String ROLE_UQ = "role_name_uq";
 
     @Column(nullable = false, unique = true, length = 64)
     private String name;

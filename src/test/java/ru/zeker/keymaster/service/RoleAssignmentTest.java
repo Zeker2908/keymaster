@@ -1,30 +1,18 @@
 package ru.zeker.keymaster.service;
 
 import io.quarkus.test.junit.QuarkusTest;
-import io.restassured.http.ContentType;
 import io.restassured.response.Response;
-import io.vertx.mutiny.sqlclient.Pool;
-import io.vertx.mutiny.sqlclient.Tuple;
-import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
+import ru.zeker.keymaster.IntegrationTestBase;
 
-import java.time.Duration;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
-import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @QuarkusTest
-class RoleAssignmentTest {
-
-    private static final Duration TIMEOUT = Duration.ofSeconds(20);
-    private static final String VALID_PASSWORD = "correct-horse-1!";
-
-    @Inject
-    Pool pool;
+class RoleAssignmentTest extends IntegrationTestBase {
 
     @Test
     void assignsRoleOnceAndWritesAuditOnlyOnFirstAssignment() {
@@ -36,7 +24,7 @@ class RoleAssignmentTest {
 
         assertEquals(1L, count("""
                 SELECT count(*) AS c
-                FROM keymaster.principal_roles
+                FROM keymaster.principal_role
                 WHERE principal_id = $1
                 """, UUID.fromString(userId)));
 
@@ -55,7 +43,7 @@ class RoleAssignmentTest {
 
         assertEquals(1L, count("""
                 SELECT count(*) AS c
-                FROM keymaster.principal_roles
+                FROM keymaster.principal_role
                 WHERE principal_id = $1
                 """, UUID.fromString(userId)));
 
@@ -87,7 +75,7 @@ class RoleAssignmentTest {
 
         assertEquals(0L, count("""
                 SELECT count(*) AS c
-                FROM keymaster.principal_roles
+                FROM keymaster.principal_role
                 WHERE principal_id = $1
                 """, UUID.fromString(userId)));
     }
@@ -108,40 +96,9 @@ class RoleAssignmentTest {
                 .statusCode(400);
     }
 
-    private Response createUser(List<String> roles) {
-        return given()
-                .contentType(ContentType.JSON)
-                .header("X-User-Id", UUID.randomUUID().toString())
-                .header("X-User-Roles", "admin")
-                .body(Map.of(
-                        "login", uniqueLogin(),
-                        "password", VALID_PASSWORD,
-                        "roles", roles
-                ))
-                .when()
-                .post("/admin/users")
-                .then()
-                .statusCode(201)
-                .extract()
-                .response();
-    }
-
     private Response assignRole(String userId, String role) {
-        return given()
-                .header("X-User-Id", UUID.randomUUID().toString())
-                .header("X-User-Roles", "admin")
+        return adminRequest()
                 .when()
                 .put("/admin/users/{id}/roles/{role}", userId, role);
-    }
-
-    private long count(String sql, Object parameter) {
-        return pool.preparedQuery(sql)
-                .execute(Tuple.of(parameter))
-                .map(rows -> rows.iterator().next().getLong("c"))
-                .await().atMost(TIMEOUT);
-    }
-
-    private String uniqueLogin() {
-        return "u-" + UUID.randomUUID().toString().substring(0, 8);
     }
 }

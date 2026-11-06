@@ -1,6 +1,5 @@
 package ru.zeker.keymaster.util;
 
-import jakarta.enterprise.context.ApplicationScoped;
 import lombok.extern.slf4j.Slf4j;
 import ru.zeker.keymaster.domain.entity.Principal;
 import ru.zeker.keymaster.domain.entity.Role;
@@ -11,8 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 
 @Slf4j
-@ApplicationScoped
-public class ExceptionTranslator {
+public final class ExceptionTranslator {
 
     private static final Map<String, ErrorCode> ERROR_CODE_MAP = Map.of(
             Principal.LOGIN_UQ, ErrorCode.LOGIN_ALREADY_EXISTS,

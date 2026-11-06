@@ -4,24 +4,24 @@ import jakarta.enterprise.context.ApplicationScoped;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import ru.zeker.keymaster.domain.PasswordViolation;
-import ru.zeker.keymaster.util.PasswordUtils;
+import ru.zeker.keymaster.util.Secrets;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @ApplicationScoped
 @RequiredArgsConstructor
-public class PasswordPolicy {
+public final class PasswordPolicy {
 
     private static final int MIN_LENGTH = 15;
     private static final int MAX_LENGTH = 64;
 
     public List<PasswordViolation> validate(String login, char[] password) {
-        char[] normalized = PasswordUtils.normalize(password);
+        char[] normalized = Secrets.normalize(password);
         try {
             return validateNormalized(login, normalized);
         } finally {
-            PasswordUtils.wipe(normalized);
+            Secrets.wipe(normalized);
         }
     }
 

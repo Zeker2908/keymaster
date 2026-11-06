@@ -3,13 +3,12 @@ package ru.zeker.keymaster.bootstrap;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.vertx.VertxContextSupport;
-import io.vertx.mutiny.sqlclient.Pool;
 import io.vertx.mutiny.sqlclient.Tuple;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
+import ru.zeker.keymaster.IntegrationTestBase;
 import ru.zeker.keymaster.service.BootstrapAdminService;
 
-import java.time.Duration;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -18,13 +17,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @QuarkusTest
 @TestProfile(BootstrapAdminTestProfile.class)
-class BootstrapAdminInitializerTest {
+class BootstrapAdminInitializerTest extends IntegrationTestBase {
 
-    private static final Duration TIMEOUT = Duration.ofSeconds(20);
     private static final String LOGIN = "bootstrap-admin";
-
-    @Inject
-    Pool pool;
 
     @Inject
     BootstrapAdminService service;
@@ -37,9 +32,9 @@ class BootstrapAdminInitializerTest {
 
         assertEquals(1L, count("""
                 SELECT count(*) AS c
-                FROM keymaster.principals p
-                JOIN keymaster.principal_roles pr ON pr.principal_id = p.id
-                JOIN keymaster.roles r ON r.id = pr.role_id
+                FROM keymaster.principal p
+                JOIN keymaster.principal_role pr ON pr.principal_id = p.id
+                JOIN keymaster.role r ON r.id = pr.role_id
                 WHERE p.id = $1
                   AND p.status = 'ACTIVE'
                   AND r.name = 'admin'
@@ -68,7 +63,7 @@ class BootstrapAdminInitializerTest {
     private UUID userId() {
         return pool.preparedQuery("""
                         SELECT id
-                        FROM keymaster.principals
+                        FROM keymaster.principal
                         WHERE login = $1
                         """)
                 .execute(Tuple.of(LOGIN))
@@ -81,7 +76,7 @@ class BootstrapAdminInitializerTest {
     private String secretHash(UUID userId) {
         return pool.preparedQuery("""
                         SELECT secret_hash
-                        FROM keymaster.credentials
+                        FROM keymaster.credential
                         WHERE principal_id = $1
                         """)
                 .execute(Tuple.of(userId))
@@ -99,12 +94,5 @@ class BootstrapAdminInitializerTest {
                   AND actor_id IS NULL
                   AND request_id = 'bootstrap'
                 """, userId.toString());
-    }
-
-    private long count(String sql, Object parameter) {
-        return pool.preparedQuery(sql)
-                .execute(Tuple.of(parameter))
-                .map(rows -> rows.iterator().next().getLong("c"))
-                .await().atMost(TIMEOUT);
     }
 }

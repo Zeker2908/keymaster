@@ -4,7 +4,9 @@ import io.smallrye.config.ConfigMapping;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
+import lombok.ToString;
 
+import java.time.Duration;
 import java.util.Optional;
 
 @ConfigMapping(prefix = "keymaster")
@@ -21,6 +23,9 @@ public interface KeymasterConfig {
 
     @Valid
     Bootstrap bootstrap();
+
+    @Valid
+    Keys keys();
 
     interface Password {
         @Valid
@@ -55,5 +60,16 @@ public interface KeymasterConfig {
 
             Optional<String> password();
         }
+    }
+
+    interface Keys {
+        Duration jwksPollInterval();
+
+        Duration leeway();
+
+        Duration maxAccessTtl();
+
+        @NotBlank
+        String masterKey();
     }
 }

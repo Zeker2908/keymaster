@@ -12,7 +12,7 @@ import ru.zeker.keymaster.dto.request.NewUserRequest;
 import ru.zeker.keymaster.exception.ErrorCode;
 import ru.zeker.keymaster.exception.KeyMasterException;
 import ru.zeker.keymaster.repository.PrincipalRoleRepository;
-import ru.zeker.keymaster.util.PasswordUtils;
+import ru.zeker.keymaster.util.Secrets;
 
 import java.util.List;
 import java.util.Set;
@@ -36,7 +36,7 @@ public class BootstrapAdminService {
                     Set<ConstraintViolation<NewUserRequest>> violations = validator.validate(request);
 
                     if (!violations.isEmpty()) {
-                        PasswordUtils.wipe(request.password());
+                        Secrets.wipe(request.password());
                         return Uni.createFrom().failure(new ConstraintViolationException(violations));
                     }
 

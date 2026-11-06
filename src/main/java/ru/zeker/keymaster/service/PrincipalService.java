@@ -25,7 +25,7 @@ import ru.zeker.keymaster.service.password.PasswordHasher;
 import ru.zeker.keymaster.service.password.PasswordPolicy;
 import ru.zeker.keymaster.util.AuditDetails;
 import ru.zeker.keymaster.util.ExceptionTranslator;
-import ru.zeker.keymaster.util.PasswordUtils;
+import ru.zeker.keymaster.util.Secrets;
 import ru.zeker.keymaster.util.UniqueViolations;
 
 import java.util.List;
@@ -53,7 +53,7 @@ public class PrincipalService {
         List<PasswordViolation> violations = policy.validate(request.login(), request.password());
         if (!violations.isEmpty()) {
             log.warn("Password policy violated for user '{}', violations={}", request.login(), violations);
-            PasswordUtils.wipe(request.password());
+            Secrets.wipe(request.password());
             return Uni.createFrom().failure(new PasswordPolicyException(violations));
         }
 

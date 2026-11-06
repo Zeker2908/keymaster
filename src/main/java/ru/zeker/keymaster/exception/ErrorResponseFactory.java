@@ -9,6 +9,7 @@ import ru.zeker.keymaster.domain.context.RequestContext;
 import ru.zeker.keymaster.exception.dto.ErrorDetail;
 import ru.zeker.keymaster.exception.dto.ErrorResponse;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 
@@ -17,6 +18,7 @@ import java.util.List;
 public class ErrorResponseFactory {
 
     private final RequestContext context;
+    private final Clock clock;
 
     public Response create(Response.Status status, String message, UriInfo uriInfo) {
         return create(status, message, List.of(), uriInfo);
@@ -39,7 +41,7 @@ public class ErrorResponseFactory {
 
     public ErrorResponse createBody(int status, String error, String message, List<ErrorDetail> details, UriInfo uriInfo) {
         return new ErrorResponse(
-                Instant.now(),
+                clock.instant(),
                 status,
                 error,
                 message,

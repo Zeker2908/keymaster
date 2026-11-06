@@ -7,10 +7,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.MapsId;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -20,10 +17,11 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
-@Table(name = "credentials")
+@Table(name = "credential")
 public class Credential {
 
     @Id
+    @Column(nullable = false, updatable = false)
     private UUID principalId;
 
     @MapsId

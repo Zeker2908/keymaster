@@ -9,7 +9,7 @@ import jakarta.inject.Named;
 import lombok.extern.slf4j.Slf4j;
 import ru.zeker.keymaster.config.KeymasterConfig;
 import ru.zeker.keymaster.exception.ServiceOverloadedException;
-import ru.zeker.keymaster.util.PasswordUtils;
+import ru.zeker.keymaster.util.Secrets;
 
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
@@ -18,7 +18,7 @@ import java.util.function.Supplier;
 
 @Slf4j
 @ApplicationScoped
-public class PasswordHasher {
+public final class PasswordHasher {
 
     private final Argon2 argon2;
     private final KeymasterConfig.Password.Argon2 config;
@@ -33,7 +33,7 @@ public class PasswordHasher {
     }
 
     public Uni<String> hash(char[] password) {
-        char[] normalized = PasswordUtils.normalize(password);
+        char[] normalized = Secrets.normalize(password);
         return execute("hash", normalized, () -> argon2.hash(
                 config.iterations(),
                 config.memory(),
@@ -43,7 +43,7 @@ public class PasswordHasher {
     }
 
     public Uni<Boolean> verify(String hashPassword, char[] password) {
-        char[] normalized = PasswordUtils.normalize(password);
+        char[] normalized = Secrets.normalize(password);
         return execute("verify", normalized, () -> argon2.verify(hashPassword, normalized));
     }
 
@@ -57,11 +57,11 @@ public class PasswordHasher {
                     } finally {
                         long durationMs = (System.nanoTime() - start) / 1_000_000;
                         log.debug("Password {} completed in {} ms", operationName, durationMs);
-                        PasswordUtils.wipe(password);
+                        Secrets.wipe(password);
                     }
                 }).runSubscriptionOn(executor)
                 .onFailure(RejectedExecutionException.class)
-                .invoke(() -> PasswordUtils.wipe(password))
+                .invoke(() -> Secrets.wipe(password))
                 .onFailure(RejectedExecutionException.class)
                 .transform(ServiceOverloadedException::new);
 

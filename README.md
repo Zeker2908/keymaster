@@ -1,78 +1,161 @@
 # keymaster
 
-This project uses Quarkus, the Supersonic Subatomic Java Framework.
+Identity & Access Service: небольшой сервис аутентификации и управления доступом для собственного API-гейтвея [`gatekeeper`](#контракт-с-gatekeeper). Заменяет Keycloak в тестовом стенде.
 
-If you want to learn more about Quarkus, please visit its website: <https://quarkus.io/>.
+> Статус: учебный проект в разработке. Не предназначен для использования вне тестового стенда (см. [Безопасность](#безопасность)).
 
-## Running the application in dev mode
+## Что это
 
-You can run your application in dev mode that enables live coding using:
+`keymaster` совмещает три роли:
 
-```shell script
-./mvnw quarkus:dev
+1. **Выдача токенов (IdP):** логин, access-JWT (RS256), refresh-токены с ротацией и защитой от повторного использования.
+2. **Хранитель ключей подписи:** генерация, шифрованное хранение, публикация публичной части в JWKS, ротация по правилам гейтвея.
+3. **Управление политиками доступа:** пользователи, роли, API-клиенты, RBAC-правила в формате гейтвея, аудит изменений.
+
+Проверкой каждого запроса сервис **не занимается**: это делает `gatekeeper`. Токен говорит гейтвею, кто пришёл и какие у него роли, правила говорят, что этим ролям разрешено.
+
+```
+Клиент ──► gatekeeper ──► бэкенды проектов
+              │  ▲
+   опрос JWKS │  │ x-user-id, x-user-roles
+   и /rules   ▼  │
+           keymaster ──► PostgreSQL
 ```
 
-> **_NOTE:_**  Quarkus now ships with a Dev UI, which is available in dev mode only at <http://localhost:8080/q/dev/>.
+### Сценарий использования
 
-## Packaging and running the application
+1. Админ заводит роли проекта и правила путей (`projecta:user` → `/projecta/**`).
+2. Бэкенд проекта (через API-клиента с узкой ролью, этап 8) регистрирует пользователей через админ-API.
+3. Пользователь логинится в `keymaster`, получает токен и ходит в проект через гейтвей.
+4. Бэкенд проекта читает `x-user-id` и `x-user-roles`, токен до него не доходит.
 
-The application can be packaged using:
+### Не цели
 
-```shell script
-./mvnw package
+Без отдельного решения (ADR) не добавляем: UI, полная OIDC-совместимость, соцлогин, мультитенантность, MFA (в плане как опция после этапа 10, [ADR-002](docs/adr/002-totp.md)).
+Один экземпляр это один «мир»: общая база пользователей и ролей, один `aud`, один набор правил для одного гейтвея.
+
+## Стек
+
+| Компонент | Выбор |
+|---|---|
+| Платформа | Quarkus 3.40 LTS, Java 25, Maven |
+| Модель | Реактивная: Quarkus REST, Hibernate Reactive Panache, reactive-pg-client |
+| БД | PostgreSQL, схема `keymaster`, миграции Flyway (через JDBC, маленький пул только для миграций) |
+| Хэширование паролей | Argon2id (`argon2-jvm`) на ограниченном worker-пуле |
+| Подпись токенов | RS256, RSA 2048 |
+| Тесты | JUnit 5, `@QuarkusTest`, Dev Services (Testcontainers), REST Assured |
+
+## Контракт с gatekeeper
+
+Источник истины: конфигурация и код гейтвея. Меняется только осознанно (через ADR).
+
+- **Токены:** RS256, в заголовке обязателен `kid`. Claims: `sub` (UUID принципала), `roles` (массив строк, верхний уровень), `exp`, `iss`, `aud` (должен содержать значение из конфига гейтвея). Leeway 60 с. Имена ролей без запятых и управляющих символов. Revocation access-токенов гейтвей не проверяет, поэтому TTL короткий.
+- **JWKS:** гейтвей опрашивает раз в 300 с, токен с неизвестным `kid` получает 401. Поэтому новый ключ публикуется заранее, старый держится, пока не истекут выданные им токены ([ADR-009](docs/adr/009-key-lifecycle.md)). Дубликат `kid` ломает весь набор.
+- **Правила (`/rules`):** опрос раз в 60 с, формат `{"public": [...], "rules": {"role": [...]}}`, любая ошибка в одном правиле отвергает весь набор. Модель allow-only, deny by default.
+- **Заголовки к upstream:** `x-user-id`, `x-user-roles`, `x-request-id`. Входящие `x-user-*` гейтвей стирает.
+
+## API
+
+Статус реализации по этапам плана.
+
+| Метод и путь | Назначение | Этап | Статус |
+|---|---|---|---|
+| `POST /admin/users` | Создать пользователя | 2 | готово |
+| `GET /admin/users/{id}` | Получить пользователя | 2 | готово |
+| `PUT /admin/users/{id}/roles/{role}` | Назначить роль (идемпотентно) | 2 | готово |
+| `DELETE /admin/users/{id}/roles/{role}` | Снять роль (защита последнего админа) | 2 | готово |
+| `POST /admin/roles` | Создать роль | 2 | готово |
+| `GET /jwks` | Публичные ключи для гейтвея | 4 | план |
+| `POST /auth/login` | Логин, выдача токенов | 5 | план |
+| `POST /auth/refresh`, `POST /auth/logout` | Refresh и выход | 6 | план |
+| `/admin/rules`, `GET /rules` | Управление правилами и выдача гейтвею | 7 | план |
+| `POST /auth/token` | Client credentials для API-клиентов | 8 | план |
+
+Все `/admin/*` требуют заголовки `x-user-id` (UUID) и `x-user-roles` с ролью `admin`. Их проставляет гейтвей. Окончательные пути служебных эндпоинтов фиксирует [ADR-011](docs/adr/011-internal-endpoints.md).
+
+Единый формат ошибок: `{code, message, requestId, details}`, `requestId` совпадает с заголовком `X-Request-Id` ответа.
+
+## План этапов
+
+| # | Этап | Статус |
+|---|---|---|
+| 1 | Каркас: слои, конфиг, ошибки, request-id, health | готово |
+| 2 | Принципалы, пароли, роли, аудит, bootstrap-админ | закрывается |
+| 3 | Ключи подписи: хранение, жизненный цикл, `kid` | следующий |
+| 4 | JWKS и контрактный тест на парсер гейтвея | план |
+| 5 | Логин, access-токен, защита от перебора | план |
+| 6 | Refresh, reuse detection, logout; блокировка и смена пароля. Чекпоинт: Keycloak в стенде заменён | план |
+| 7 | Роли и правила: схема, валидатор путей, `/rules`, аудит | план |
+| 8 | API-клиенты (client credentials) | план |
+| 9 | Ротация ключей в рабочем режиме | план |
+| 10 | Финал: интеграция в стенд, smoke, k6, hardening | план |
+| 11 | TOTP (опционально) | после 10 |
+
+## Запуск
+
+Требуется Java 25 и Docker (Dev Services поднимают PostgreSQL для dev и тестов).
+
+```bash
+./mvnw quarkus:dev      # dev-режим, БД поднимется автоматически
+./mvnw verify           # сборка и тесты
 ```
 
-It produces the `quarkus-run.jar` file in the `target/quarkus-app/` directory.
-Be aware that it’s not an _über-jar_ as the dependencies are copied into the `target/quarkus-app/lib/` directory.
+Prod-подобный запуск против своего PostgreSQL:
 
-The application is now runnable using `java -jar target/quarkus-app/quarkus-run.jar`.
-
-If you want to build an _über-jar_, execute the following command:
-
-```shell script
-./mvnw package -Dquarkus.package.jar.type=uber-jar
+```bash
+export DB_HOST=localhost DB_NAME=km DB_USER=km DB_PASS=km
+export JWT_ISSUER_MASTER=http://keymaster JWT_AUDIENCE=gatekeeper
+./mvnw package && java -jar target/quarkus-app/quarkus-run.jar
 ```
 
-The application, packaged as an _über-jar_, is now runnable using `java -jar target/*-runner.jar`.
+### Конфигурация (prod)
 
-## Creating a native executable
+| Переменная | Назначение |
+|---|---|
+| `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS` | Подключение к PostgreSQL |
+| `JWT_ISSUER_MASTER` | Значение `iss` в токенах |
+| `JWT_AUDIENCE` | Значение `aud`, должно совпадать с конфигом гейтвея |
+| `CONCURRENT_HASHES` | Лимит одновременных хэшей Argon2 (по умолчанию 4) |
+| `KEYMASTER_BOOTSTRAP_ADMIN_LOGIN`, `KEYMASTER_BOOTSTRAP_ADMIN_PASSWORD` | Первый администратор (`keymaster.bootstrap.admin.*`), создаётся только если нет ни одного активного админа |
+| `KEYMASTER_MASTER_KEY` | Мастер-ключ шифрования приватных ключей, 32 байта в base64 (с этапа 3) |
 
-You can create a native executable using:
+Значений по умолчанию для секретов в `%prod` нет: без них сервис не стартует.
 
-```shell script
-./mvnw package -Dnative
-```
+## Безопасность
 
-Or, if you don't have GraalVM installed, you can run the native executable build in a container using:
+- **Пароли:** Argon2id, параметры и замер в [ADR-005](docs/adr/005-password-hashing.md) (около 120 мс на хэш на dev-машине). Хэширование идёт на ограниченном пуле: при перегрузке сервис отвечает 503 с `Retry-After`, а не исчерпывает память.
+- **Секреты в логах и ответах:** пароли и хэши не попадают в ответы, `details` аудита и логи.
+- **Аудит:** append-only `audit_log` (триггеры запрещают `UPDATE`, `DELETE`, `TRUNCATE`), запись в той же транзакции, что и изменение ([ADR-007](docs/adr/007-audit.md)).
+- **Граница доверия:** сервис доверяет заголовкам `x-user-*` и должен быть недоступен в обход гейтвея ([ADR-001](docs/adr/001-stack-and-trust-boundary.md)). В compose порт `keymaster` наружу не публикуется.
+- **Bootstrap-админ:** пароль из env годится только для тестового стенда. Смена пароля появится на этапе 6; до тех пор использовать сервис за пределами стенда нельзя ([ADR-012](docs/adr/012-bootstrap-admin.md)).
 
-```shell script
-./mvnw package -Dnative -Dquarkus.native.container-build=true
-```
+## Архитектурные решения (ADR)
 
-You can then execute your native executable with: `./target/keymaster-1.0.0-runner`
+Формат записи: контекст, решение, последствия. Файлы лежат в `docs/adr/`.
 
-If you want to learn more about building native executables, please consult <https://quarkus.io/guides/maven-tooling>.
+| № | Решение | Статус |
+|---|---|---|
+| [001](docs/adr/001-stack-and-trust-boundary.md) | Стек (Quarkus 3.40 LTS, Java 25, реактивный, Flyway через JDBC) и граница доверия | принят |
+| [002](docs/adr/002-totp.md) | TOTP как опциональный второй фактор, после этапа 10 | черновик |
+| [003](docs/adr/003-login-identifier.md) | Идентификатор входа: username без почты, `sub` равен UUID принципала | принят |
+| [004](docs/adr/004-registration.md) | Регистрация только через админ-API; инвайт-коды позже | принят |
+| [005](docs/adr/005-password-hashing.md) | Хэширование паролей: Argon2id, параметры, ограниченный пул, политика пароля, нормализация | принят |
+| [006](docs/adr/006-principal-model.md) | Единая модель принципалов (user и client), `sub` равен UUID | принят |
+| [007](docs/adr/007-audit.md) | Аудит: append-only журнал, запись в одной транзакции с изменением, `target_id` как текст | принят |
+| [008](docs/adr/008-signing-key-storage.md) | Хранение приватных ключей: AES-256-GCM, мастер-ключ из env, AAD равен `kid` | принят, реализация в этапе 3 |
+| [009](docs/adr/009-key-lifecycle.md) | Жизненный цикл ключа: временные метки, предпубликация, единственный подписант | принят, реализация в этапе 3 |
+| [010](docs/adr/010-signing-algorithm.md) | Алгоритм подписи: RS256 (RSA 2048) | принят |
+| [011](docs/adr/011-internal-endpoints.md) | Служебные эндпоинты (`/jwks`, `/rules`) вне `/admin`, недоступны через гейтвей | предложен |
+| [012](docs/adr/012-bootstrap-admin.md) | Bootstrap-админ из env, идемпотентно, обязательная смена пароля | предложен |
 
-## Related Guides
+### Открытые вопросы
 
-- Reactive PostgreSQL client ([guide](https://quarkus.io/guides/reactive-sql-clients)): Connect to the PostgreSQL database using the reactive pattern
-- Flyway ([guide](https://quarkus.io/guides/flyway)): Handle your database schema migrations
-- JDBC Driver - PostgreSQL ([guide](https://quarkus.io/guides/datasource)): Connect to the PostgreSQL database via JDBC
-- SmallRye Health ([guide](https://quarkus.io/guides/smallrye-health)): Monitor service health
-- REST ([guide](https://quarkus.io/guides/rest)): Build RESTful web services and APIs using Jakarta REST (formerly JAX-RS)
-- REST Jackson ([guide](https://quarkus.io/guides/rest#json-serialisation)): Jackson serialization support for Quarkus REST. This extension is not compatible with the quarkus-resteasy extension, or any of the extensions that depend on it
-- Hibernate Validator ([guide](https://quarkus.io/guides/validation)): Bean validation using Hibernate Validator and Jakarta Validation annotations
+- Denylist частых паролей отложен: статический файл в `HashSet`, без БД.
+- Конечный TTL access-токена и значение `max-access-ttl` фиксируются на этапе 5.
 
-## Provided Code
+## Тестирование
 
-### REST
-
-Easily start your REST Web Services
-
-[Related guide section...](https://quarkus.io/guides/getting-started-reactive#reactive-jax-rs-resources)
-
-### SmallRye Health
-
-Monitor your application's health using SmallRye Health
-
-[Related guide section...](https://quarkus.io/guides/smallrye-health)
+- Интеграционные тесты идут через HTTP и реальный PostgreSQL (Dev Services).
+- Журнал аудита очищать нельзя (триггеры): тесты используют уникальные логины и имена ролей и ищут записи по `target_id`.
+- Тесты, которые временно меняют глобальное состояние (например, набор администраторов), рассчитаны на последовательный запуск.
+- Контрактные тесты (этапы 4, 5, 7): JWKS, токены и формат правил проверяются настоящим валидатором и парсером гейтвея.

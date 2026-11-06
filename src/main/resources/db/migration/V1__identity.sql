@@ -1,42 +1,42 @@
-CREATE TABLE principals (
+CREATE TABLE principal (
     id         uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
     kind       text        NOT NULL,
     login      text        NOT NULL,
     status     text        NOT NULL DEFAULT 'ACTIVE',
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
-    CONSTRAINT principals_kind_chk   CHECK (kind IN ('USER', 'CLIENT')),
-    CONSTRAINT principals_status_chk CHECK (status IN ('ACTIVE', 'DISABLED')),
-    CONSTRAINT principals_login_chk  CHECK (login ~ '^[a-z0-9._-]{3,32}$'),
-    CONSTRAINT principals_login_uq   UNIQUE (login)
+    CONSTRAINT principal_kind_chk   CHECK (kind IN ('USER', 'CLIENT')),
+    CONSTRAINT principal_status_chk CHECK (status IN ('ACTIVE', 'DISABLED')),
+    CONSTRAINT principal_login_chk  CHECK (login ~ '^[a-z0-9._-]{3,32}$'),
+    CONSTRAINT principal_login_uq   UNIQUE (login)
 );
 
-CREATE TABLE credentials (
-    principal_id uuid        PRIMARY KEY REFERENCES principals (id) ON DELETE CASCADE,
+CREATE TABLE credential (
+    principal_id uuid        PRIMARY KEY REFERENCES principal (id) ON DELETE CASCADE,
     secret_hash  text        NOT NULL,
     changed_at   timestamptz NOT NULL DEFAULT now(),
-    CONSTRAINT credentials_hash_chk CHECK (secret_hash LIKE '$argon2id$%')
+    CONSTRAINT credential_hash_chk CHECK (secret_hash LIKE '$argon2id$%')
 );
 
-CREATE TABLE roles (
+CREATE TABLE role (
     id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
     name        text        NOT NULL,
     description text,
     created_at  timestamptz NOT NULL DEFAULT now(),
-    CONSTRAINT roles_name_chk CHECK (name ~ '^[a-z0-9][a-z0-9._:-]{0,63}$'),
-    CONSTRAINT roles_name_uq  UNIQUE (name)
+    CONSTRAINT role_name_chk CHECK (name ~ '^[a-z0-9][a-z0-9._:-]{0,63}$'),
+    CONSTRAINT role_name_uq  UNIQUE (name)
 );
 
-INSERT INTO roles (name, description)
+INSERT INTO role (name, description)
 VALUES ('admin', 'Full administrative access to keymaster');
 
-CREATE TABLE principal_roles (
-    principal_id uuid        NOT NULL REFERENCES principals (id) ON DELETE CASCADE,
-    role_id      uuid        NOT NULL REFERENCES roles (id) ON DELETE RESTRICT,
+CREATE TABLE principal_role (
+    principal_id uuid        NOT NULL REFERENCES principal (id) ON DELETE CASCADE,
+    role_id      uuid        NOT NULL REFERENCES role (id) ON DELETE RESTRICT,
     assigned_at  timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (principal_id, role_id)
 );
-CREATE INDEX principal_roles_role_idx ON principal_roles (role_id);
+CREATE INDEX principal_role_role_idx ON principal_role (role_id);
 
 CREATE TABLE audit_log (
     id          bigint      GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

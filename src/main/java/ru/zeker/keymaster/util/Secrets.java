@@ -6,13 +6,17 @@ import java.nio.CharBuffer;
 import java.text.Normalizer;
 import java.util.Arrays;
 
-public final class PasswordUtils {
+public final class Secrets {
 
-    private PasswordUtils() {
+    private Secrets() {
     }
 
-    public static void wipe(char[] password) {
-        if (password != null) Arrays.fill(password, CharUtils.NUL);
+    public static void wipe(char[] secret) {
+        if (secret != null) Arrays.fill(secret, CharUtils.NUL);
+    }
+
+    public static void wipe(byte[] secret) {
+        if (secret != null) Arrays.fill(secret, (byte) 0);
     }
 
     /**

@@ -16,12 +16,13 @@ import java.time.Instant;
 @Getter
 @Setter
 @Entity
-@Table(name = "principal_roles")
+@Table(name = "principal_role")
 public class PrincipalRole {
 
-    public static final String PRIMARY_KEY = "principal_roles_pkey";
+    public static final String PRIMARY_KEY = "principal_role_pkey";
 
     @EmbeddedId
+    @Column(nullable = false, updatable = false)
     private PrincipalRoleId id;
 
     @MapsId("principalId")

@@ -29,6 +29,7 @@ import java.util.UUID;
 public class AuditLog {
 
     @Id
+    @Column(nullable = false, updatable = false)
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
