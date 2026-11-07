@@ -12,6 +12,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import org.hibernate.annotations.CreationTimestamp;
 import ru.zeker.keymaster.domain.Algorithm;
 import ru.zeker.keymaster.domain.key.EncryptedKey;
@@ -21,6 +22,7 @@ import java.time.Instant;
 
 @Getter
 @Builder
+@ToString
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
@@ -40,10 +42,12 @@ public class SigningKey {
     @Column(name = "public_key", nullable = false)
     private byte[] publicKey;
 
+    @ToString.Exclude
     @Getter(AccessLevel.NONE)
     @Column(name = "private_key_enc", nullable = false)
     private byte[] privateKeyEnc;
 
+    @ToString.Exclude
     @Getter(AccessLevel.NONE)
     @Column(nullable = false)
     private byte[] nonce;

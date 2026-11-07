@@ -164,6 +164,14 @@ public abstract class IntegrationTestBase {
                 .await().atMost(TIMEOUT);
     }
 
+    /** Считает колонку {@code c} первой строки результата запроса без параметров. */
+    protected long count(String sql) {
+        return pool.query(sql)
+                .execute()
+                .map(rows -> rows.iterator().next().getLong("c"))
+                .await().atMost(TIMEOUT);
+    }
+
     /** Принципалы, которым назначена роль {@code admin}. */
     protected List<UUID> principalsWithAdminRole() {
         return pool.preparedQuery("""

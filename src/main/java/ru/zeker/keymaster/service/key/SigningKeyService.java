@@ -9,8 +9,11 @@ import ru.zeker.keymaster.domain.AuditAction;
 import ru.zeker.keymaster.domain.entity.SigningKey;
 import ru.zeker.keymaster.domain.key.EncryptedKey;
 import ru.zeker.keymaster.domain.key.GeneratedKey;
+import ru.zeker.keymaster.domain.key.KeyHeader;
 import ru.zeker.keymaster.domain.key.KeyLifecycle;
 import ru.zeker.keymaster.domain.key.KeyTimeline;
+import ru.zeker.keymaster.exception.ErrorCode;
+import ru.zeker.keymaster.exception.KeyMasterException;
 import ru.zeker.keymaster.mapper.SigningKeyMapper;
 import ru.zeker.keymaster.repository.SigningKeyRepository;
 import ru.zeker.keymaster.service.AuditService;
@@ -18,6 +21,8 @@ import ru.zeker.keymaster.util.AuditDetails;
 import ru.zeker.keymaster.util.Secrets;
 
 import java.time.Clock;
+import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -33,11 +38,37 @@ public class SigningKeyService {
     private final SigningKeyMapper mapper;
     private final Clock clock;
 
+    public Uni<Boolean> ensureInitialKey() {
+        return Panache.withSession(signingKeys::existsAny)
+                .chain(exists -> exists
+                        ? Uni.createFrom().item(false)
+                        : createKey(KeyTimeline.initial(clock.instant()), true).replaceWith(true))
+                .onFailure(this::isScheduleConflict)
+                .recoverWithUni(this::recheckAfterScheduleConflict);
+    }
+
     public Uni<Void> createKey() {
+        return createKey(KeyTimeline.initial(clock.instant()), true);
+    }
+
+    public Uni<Void> createKey(KeyTimeline timeline) {
+        return createKey(timeline, false);
+    }
+
+    public Uni<List<KeyHeader>> listPublished() {
+        Instant now = clock.instant();
+
+        return signingKeys.listPublishedCandidates(now)
+                .map(candidates -> candidates.stream()
+                        .filter(key -> lifecycle.isPublished(
+                                lifecycle.stateAt(key.timeline(), now)))
+                        .toList());
+    }
+
+    private Uni<Void> createKey(KeyTimeline timeline, boolean initialKey) {
         log.info("Starting signing key creation");
 
-        KeyTimeline timeline = KeyTimeline.initial(clock.instant());
-        lifecycle.validate(timeline, true);
+        lifecycle.validate(timeline, initialKey);
 
         log.debug("Signing key timeline validated: publishAt={}, activateAt={}",
                 timeline.publishAt(), timeline.activateAt());
@@ -48,14 +79,37 @@ public class SigningKeyService {
                 .map(pair -> mapper.toRsaEntity(pair, timeline))
                 .chain(key -> Panache.withTransaction(() -> persistKey(key)))
                 .invoke(() -> log.info("Signing key creation completed successfully"))
-                .onFailure().invoke(e -> log.error("Signing key creation failed: {}", e.getMessage()));
+                .onFailure(e -> !(initialKey && isScheduleConflict(e)))
+                .invoke(e -> log.error("Signing key creation failed: {}", e.getMessage()));
+    }
+
+    private Uni<Boolean> recheckAfterScheduleConflict(Throwable failure) {
+        log.debug("Initial signing key creation conflicted with another instance; re-checking key presence");
+
+        return Panache.withSession(signingKeys::existsAny)
+                .chain(exists -> exists
+                        ? Uni.createFrom().item(false)
+                        : Uni.createFrom().failure(new IllegalStateException(
+                                "Initial signing key creation failed: another instance won the race, "
+                                        + "but no signing key exists. Check the database and master key configuration.",
+                                failure)));
+    }
+
+    private boolean isScheduleConflict(Throwable failure) {
+        for (Throwable cause = failure; cause != null; cause = cause.getCause()) {
+            if (cause instanceof KeyMasterException exception
+                    && exception.getCode() == ErrorCode.KEY_SCHEDULE_CONFLICT) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private Uni<Void> persistKey(SigningKey key) {
         return signingKeys.create(key)
                 .invoke(sk -> log.info("Signing key {} successfully saved", sk.getKid()))
-                .call(sk -> audits.recordKey(AuditAction.ROLE_CREATED, sk, AuditDetails.keyCreated(sk)))
-                .onFailure().invoke(e -> log.error("Failed to persist signing key {} : {}", key.getKid(), e.getMessage()))
+                .call(sk -> audits.recordKey(AuditAction.KEY_CREATED, sk, AuditDetails.keyCreated(sk)))
                 .replaceWithVoid();
     }
 

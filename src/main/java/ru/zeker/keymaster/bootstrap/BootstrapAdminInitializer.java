@@ -16,11 +16,11 @@ import java.time.Duration;
 public class BootstrapAdminInitializer {
 
     private final KeymasterConfig.Bootstrap.Admin config;
-    private final BootstrapAdminService service;
+    private final BootstrapAdminService admins;
 
-    public BootstrapAdminInitializer(KeymasterConfig config, BootstrapAdminService service) {
+    public BootstrapAdminInitializer(KeymasterConfig config, BootstrapAdminService admins) {
         this.config = config.bootstrap().admin();
-        this.service = service;
+        this.admins = admins;
     }
 
     void onStart(@Observes StartupEvent event) throws Throwable {
@@ -37,7 +37,7 @@ public class BootstrapAdminInitializer {
                 .filter(StringUtils::isNotBlank)
                 .orElseThrow(() -> new IllegalStateException("Bootstrap admin password is not configured"));
 
-        boolean created = VertxContextSupport.subscribeAndAwait(() -> service.ensureAdmin(login, password)
+        boolean created = VertxContextSupport.subscribeAndAwait(() -> admins.ensureAdmin(login, password)
                 .ifNoItem()
                 .after(Duration.ofSeconds(30))
                 .fail());

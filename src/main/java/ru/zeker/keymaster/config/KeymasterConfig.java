@@ -4,7 +4,7 @@ import io.smallrye.config.ConfigMapping;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
-import lombok.ToString;
+import ru.zeker.keymaster.config.validation.ValidMasterKey;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -53,12 +53,19 @@ public interface KeymasterConfig {
         @Valid
         Admin admin();
 
+        @Valid
+        SigningKey signingKey();
+
         interface Admin {
             boolean enabled();
 
             Optional<String> login();
 
             Optional<String> password();
+        }
+
+        interface SigningKey {
+            boolean enabled();
         }
     }
 
@@ -70,6 +77,7 @@ public interface KeymasterConfig {
         Duration maxAccessTtl();
 
         @NotBlank
+        @ValidMasterKey
         String masterKey();
     }
 }

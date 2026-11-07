@@ -117,6 +117,7 @@ export JWT_ISSUER_MASTER=http://keymaster JWT_AUDIENCE=gatekeeper
 | `JWT_AUDIENCE` | Значение `aud`, должно совпадать с конфигом гейтвея |
 | `CONCURRENT_HASHES` | Лимит одновременных хэшей Argon2 (по умолчанию 4) |
 | `KEYMASTER_BOOTSTRAP_ADMIN_LOGIN`, `KEYMASTER_BOOTSTRAP_ADMIN_PASSWORD` | Первый администратор (`keymaster.bootstrap.admin.*`), создаётся только если нет ни одного активного админа |
+| `BOOTSTRAP_SIGNING_KEY_ENABLED` | Создание начального signing-ключа при старте (`keymaster.bootstrap.signing-key.enabled`, по умолчанию `true`); ключ создаётся только если в БД нет ни одного ключа |
 | `KEYMASTER_MASTER_KEY` | Мастер-ключ шифрования приватных ключей, 32 байта в base64 (с этапа 3) |
 
 Значений по умолчанию для секретов в `%prod` нет: без них сервис не стартует.

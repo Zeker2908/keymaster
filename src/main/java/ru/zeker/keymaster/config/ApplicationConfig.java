@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 public class ApplicationConfig {
 
     @Produces
-    @Singleton
+    @ApplicationScoped
     Clock clock() {
         return Clock.systemUTC();
     }
@@ -44,7 +44,7 @@ public class ApplicationConfig {
     ExecutorService passwordHashingExecutor(KeymasterConfig config) {
         var conf = config.password().argon2();
         ThreadFactory threadFactory = Thread.ofPlatform()
-                .name("password-hashing-")
+                .name("password-hashing-", 1)
                 .factory();
         return new ThreadPoolExecutor(
                 conf.maxConcurrentHashes(),
@@ -62,7 +62,7 @@ public class ApplicationConfig {
     @Named("key-generation")
     public ExecutorService keyGenerationExecutor() {
         ThreadFactory threadFactory = Thread.ofPlatform()
-                .name("key-generation-")
+                .name("key-generation-", 1)
                 .factory();
 
         return new ThreadPoolExecutor(
