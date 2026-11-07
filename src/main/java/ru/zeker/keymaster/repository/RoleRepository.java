@@ -13,6 +13,10 @@ import java.util.UUID;
 @ApplicationScoped
 public class RoleRepository implements PanacheRepositoryBase<Role, UUID> {
 
+    public Uni<Role> create(Role role) {
+        return PersistenceErrors.translate(persistAndFlush(role));
+    }
+
     public Uni<Role> findByName(String name) {
         return find("name = ?1", name).firstResult();
     }

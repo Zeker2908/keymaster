@@ -14,6 +14,7 @@ public record KeyTimeline(
         @Column(name = "remove_at") Instant removeAt,
         @Column(name = "revoked_at") Instant revokedAt
 ) {
+
     public KeyTimeline {
         Objects.requireNonNull(publishAt, "publishAt must not be null");
         Objects.requireNonNull(activateAt, "activateAt must not be null");
@@ -30,5 +31,16 @@ public record KeyTimeline(
         if (removeAt != null && retireAt.isAfter(removeAt)) {
             throw new IllegalArgumentException("retireAt must not be after removeAt");
         }
+    }
+
+    public static KeyTimeline initial(Instant now) {
+        return new KeyTimeline(now, now, null, null, null);
+    }
+
+    public static KeyTimeline scheduled(
+            Instant publishAt,
+            Instant activateAt
+    ) {
+        return new KeyTimeline(publishAt, activateAt, null, null, null);
     }
 }

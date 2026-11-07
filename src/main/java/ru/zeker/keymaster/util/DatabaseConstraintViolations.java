@@ -7,40 +7,40 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public final class UniqueViolations {
+public final class DatabaseConstraintViolations {
 
-    private static final String UNIQUE_VIOLATION = "23505";
+    public static final String UNIQUE_VIOLATION = "23505";
+    public static final String EXCLUSION_VIOLATION = "23P01";
     private static final Pattern CONSTRAINT_IN_MESSAGE =
             Pattern.compile("unique constraint \"([^\"]+)\"");
 
-    private UniqueViolations() {}
+    private DatabaseConstraintViolations() {}
 
-    public static Optional<String> constraintName(Throwable failure) {
-        boolean unique = false;
+    public static Optional<String> constraintName(Throwable failure, String sqlState) {
         String name = null;
+        boolean matched = false;
 
         for (Throwable cause = failure; cause != null; cause = cause.getCause()) {
             if (cause instanceof PgException pg) {
-                unique |= UNIQUE_VIOLATION.equals(pg.getSqlState());
+                if (sqlState.equals(pg.getSqlState())) {
+                    matched = true;
+                }
                 if (name == null) {
                     name = pg.getConstraint();
                 }
             }
+
             if (cause instanceof ConstraintViolationException violation) {
-                unique |= UNIQUE_VIOLATION.equals(violation.getSQLState());
+                if (sqlState.equals(violation.getSQLState())) {
+                    matched = true;
+                }
                 if (name == null) {
                     name = violation.getConstraintName();
                 }
             }
-            if (name == null && cause.getMessage() != null) {
-                Matcher matcher = CONSTRAINT_IN_MESSAGE.matcher(cause.getMessage());
-                if (matcher.find()) {
-                    unique = true;
-                    name = matcher.group(1);
-                }
-            }
         }
 
-        return unique ? Optional.ofNullable(name) : Optional.empty();
+        return matched ? Optional.ofNullable(name) : Optional.empty();
     }
+
 }

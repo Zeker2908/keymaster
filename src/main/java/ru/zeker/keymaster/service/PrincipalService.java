@@ -10,7 +10,6 @@ import ru.zeker.keymaster.domain.AuditAction;
 import ru.zeker.keymaster.domain.PasswordViolation;
 import ru.zeker.keymaster.domain.context.Actor;
 import ru.zeker.keymaster.domain.entity.Principal;
-import ru.zeker.keymaster.domain.entity.PrincipalRole;
 import ru.zeker.keymaster.domain.entity.Role;
 import ru.zeker.keymaster.dto.request.NewUserRequest;
 import ru.zeker.keymaster.dto.response.UserResponse;
@@ -24,9 +23,7 @@ import ru.zeker.keymaster.repository.PrincipalRoleRepository;
 import ru.zeker.keymaster.service.password.PasswordHasher;
 import ru.zeker.keymaster.service.password.PasswordPolicy;
 import ru.zeker.keymaster.util.AuditDetails;
-import ru.zeker.keymaster.util.ExceptionTranslator;
 import ru.zeker.keymaster.util.Secrets;
-import ru.zeker.keymaster.util.UniqueViolations;
 
 import java.util.List;
 import java.util.UUID;
@@ -59,7 +56,6 @@ public class PrincipalService {
 
         return hasher.hash(request.password())
                 .chain(hash -> Panache.withTransaction(() -> persistUser(actor, request, hash)))
-                .onFailure().transform(ExceptionTranslator::translate)
                 .invoke(response -> log.info("User '{}' created, id={}", response.login(), response.id()));
     }
 
@@ -82,13 +78,7 @@ public class PrincipalService {
                         .chain(principal -> roles.findByName(roleName)
                                 .onItem().ifNull().failWith(() ->
                                         new KeyMasterException(ErrorCode.ROLE_NOT_FOUND))
-                                .chain(role -> principalRoles.existsByPrincipalIdAndRoleId(userId, role.getId())
-                                        .chain(assigned -> assigned
-                                                ? Uni.createFrom().voidItem()
-                                                : linkRole(actor, principal, role).replaceWithVoid()))))
-                .onFailure(f -> UniqueViolations.constraintName(f)
-                        .filter(PrincipalRole.PRIMARY_KEY::equals).isPresent())
-                .recoverWithNull()
+                                .chain(role -> linkRole(actor, principal, role).replaceWithVoid())))
                 .replaceWithVoid();
     }
 
@@ -140,7 +130,7 @@ public class PrincipalService {
 
                     Principal principal = mapper.toUser(request);
 
-                    return principals.persist(principal)
+                    return principals.create(principal)
                             .invoke(() -> log.debug("Principal persisted for user '{}', id={}",
                                     principal.getLogin(), principal.getId()))
                             .call(() -> audits.recordUser(actor, AuditAction.USER_CREATED, principal,
@@ -159,11 +149,13 @@ public class PrincipalService {
     }
 
     private Uni<Role> linkRole(Actor actor, Principal principal, Role role) {
-        return principalRoles.persist(mapper.toPrincipalRole(principal, role))
-                .invoke(() -> log.debug("Role '{}' linked to user '{}'",
-                        role.getName(), principal.getLogin()))
-                .call(() -> audits.recordUser(actor, AuditAction.ROLE_ASSIGNED, principal,
-                        AuditDetails.roleAssigned(role)))
+        return principalRoles.assign(principal.getId(), role.getId())
+                .invoke(assigned -> log.debug("Role '{}' {} user '{}'",
+                        role.getName(), assigned ? "linked to" : "already linked to", principal.getLogin()))
+                .chain(assigned -> assigned
+                        ? audits.recordUser(actor, AuditAction.ROLE_ASSIGNED, principal,
+                        AuditDetails.roleAssigned(role))
+                        : Uni.createFrom().voidItem())
                 .replaceWith(role);
     }
 

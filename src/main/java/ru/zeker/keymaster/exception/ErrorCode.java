@@ -17,7 +17,8 @@ public enum ErrorCode {
     ROLE_NOT_FOUND( 404, "Role not found"),
     LAST_ADMIN( 409, "Cannot revoke the last active administrator role"),
     ROLE_ALREADY_EXISTS( 409, "Role already exists"),
-    KEY_DECRYPTION_FAILED(500, "Unable to decrypt key");
+    KEY_DECRYPTION_FAILED(500, "Unable to decrypt key"),
+    KEY_SCHEDULE_CONFLICT(409, "Signing key schedule conflicts with an existing key");
 
     private final int status;
     private final String defaultMessage;

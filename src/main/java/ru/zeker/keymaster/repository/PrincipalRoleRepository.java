@@ -26,6 +26,19 @@ public class PrincipalRoleRepository implements PanacheRepositoryBase<PrincipalR
                 .map(count -> count > 0);
     }
 
+    public Uni<Boolean> assign(UUID principalId, UUID roleId) {
+        return getSession()
+                .chain(session -> session.createNativeQuery("""
+                                INSERT INTO {h-schema}principal_role (principal_id, role_id)
+                                VALUES (:principalId, :roleId)
+                                ON CONFLICT (principal_id, role_id) DO NOTHING
+                                """)
+                        .setParameter("principalId", principalId)
+                        .setParameter("roleId", roleId)
+                        .executeUpdate())
+                .map(rows -> rows > 0);
+    }
+
     public Uni<Boolean> existsActiveAdmin() {
         return count("role.name = ?1 and principal.status = ?2", "admin", PrincipalStatus.ACTIVE)
                 .map(count -> count > 0);
