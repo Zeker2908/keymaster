@@ -27,6 +27,8 @@ import java.time.Instant;
 @Table(name = "signing_key")
 public class SigningKey {
 
+    public static final String KEY_SCHEDULE_EXCL = "signing_key_single_signer";
+
     @Id
     @Column(nullable = false, updatable = false)
     private String kid;

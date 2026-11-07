@@ -7,6 +7,11 @@ import ru.zeker.keymaster.IntegrationTestBase;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -40,6 +45,43 @@ class RoleAssignmentTest extends IntegrationTestBase {
         assignRole(userId, "admin")
                 .then()
                 .statusCode(204);
+
+        assertEquals(1L, count("""
+                SELECT count(*) AS c
+                FROM keymaster.principal_role
+                WHERE principal_id = $1
+                """, UUID.fromString(userId)));
+
+        assertEquals(1L, count("""
+                SELECT count(*) AS c
+                FROM keymaster.audit_log
+                WHERE action = 'role.assigned'
+                  AND target_type = 'user'
+                  AND target_id = $1
+                """, userId));
+    }
+
+    @Test
+    void assignsRoleOnceUnderConcurrency() throws Exception {
+        String userId = createUser(List.of()).jsonPath().getString("id");
+
+        CountDownLatch start = new CountDownLatch(1);
+
+        try (ExecutorService executor = Executors.newFixedThreadPool(2)) {
+            Future<Response> first = executor.submit(() -> {
+                start.await();
+                return assignRole(userId, "admin");
+            });
+            Future<Response> second = executor.submit(() -> {
+                start.await();
+                return assignRole(userId, "admin");
+            });
+
+            start.countDown();
+
+            assertEquals(204, first.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS).statusCode());
+            assertEquals(204, second.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS).statusCode());
+        }
 
         assertEquals(1L, count("""
                 SELECT count(*) AS c

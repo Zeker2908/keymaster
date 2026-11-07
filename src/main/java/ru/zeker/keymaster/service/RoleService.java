@@ -15,7 +15,6 @@ import ru.zeker.keymaster.exception.ErrorCode;
 import ru.zeker.keymaster.exception.KeyMasterException;
 import ru.zeker.keymaster.mapper.RoleMapper;
 import ru.zeker.keymaster.repository.RoleRepository;
-import ru.zeker.keymaster.util.ExceptionTranslator;
 
 import java.util.Collection;
 import java.util.List;
@@ -43,9 +42,8 @@ public class RoleService {
 
     public Uni<RoleDetailsResponse> create(Actor actor, NewRoleRequest request) {
         log.info("Creating role '{}'", request.name());
-        return Panache.withTransaction(() -> roles.persist(mapper.toEntity(request))
+        return Panache.withTransaction(() -> roles.create(mapper.toEntity(request))
                 .call(role -> audits.recordRole(actor, AuditAction.ROLE_CREATED, role))
-                .onFailure().transform(ExceptionTranslator::translate)
                 .map(mapper::toResponse)
                 .invoke(response -> log.info("Role '{}' created with id {}", response.name(), response.id())));
     }

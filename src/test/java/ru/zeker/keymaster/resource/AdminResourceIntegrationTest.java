@@ -358,6 +358,19 @@ class AdminResourceIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
+    void mapsDuplicateRoleNameToConflict() {
+        String roleName = "test-" + UUID.randomUUID().toString().substring(0, 8);
+
+        assertEquals(201, createRole(roleName).statusCode());
+
+        createRole(roleName)
+                .then()
+                .statusCode(409)
+                .body("error", equalTo("ROLE_ALREADY_EXISTS"))
+                .body("message", equalTo("Role already exists"));
+    }
+
+    @Test
     void rejectsParallelDuplicateLogin() throws ExecutionException, InterruptedException {
         String login = uniqueLogin();
 

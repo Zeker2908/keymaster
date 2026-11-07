@@ -18,8 +18,7 @@ public final class RsaKeyCodec {
     private static final String ALGORITHM = "RSA";
     private static final String SHA_256 = "SHA-256";
 
-    private static final Base64.Encoder BASE64_URL_ENCODER =
-            Base64.getUrlEncoder().withoutPadding();
+    private static final Base64.Encoder BASE64_URL_ENCODER = Base64.getUrlEncoder().withoutPadding();
 
     private static final String E_S_KTY_RSA_N_S = "{\"e\":\"%s\",\"kty\":\"RSA\",\"n\":\"%s\"}";
 
@@ -34,9 +33,7 @@ public final class RsaKeyCodec {
         try {
             KeyFactory keyFactory = KeyFactory.getInstance(ALGORITHM);
 
-            return keyFactory.generatePublic(
-                    new X509EncodedKeySpec(encoded)
-            );
+            return keyFactory.generatePublic(new X509EncodedKeySpec(encoded));
         } catch (GeneralSecurityException e) {
             throw new IllegalArgumentException("Invalid RSA public key", e);
         }
@@ -50,9 +47,7 @@ public final class RsaKeyCodec {
         try {
             KeyFactory keyFactory = KeyFactory.getInstance(ALGORITHM);
 
-            return keyFactory.generatePrivate(
-                    new PKCS8EncodedKeySpec(encoded)
-            );
+            return keyFactory.generatePrivate(new PKCS8EncodedKeySpec(encoded));
         } catch (GeneralSecurityException e) {
             throw new IllegalArgumentException("Invalid RSA private key", e);
         }
@@ -67,15 +62,12 @@ public final class RsaKeyCodec {
     }
 
     public static String thumbprint(RSAPublicKey publicKey) {
-        String json = E_S_KTY_RSA_N_S
-                .formatted(jwkE(publicKey), jwkN(publicKey));
+        String json = E_S_KTY_RSA_N_S.formatted(jwkE(publicKey), jwkN(publicKey));
 
         try {
             MessageDigest digest = MessageDigest.getInstance(SHA_256);
 
-            return BASE64_URL_ENCODER.encodeToString(
-                    digest.digest(json.getBytes(StandardCharsets.UTF_8))
-            );
+            return BASE64_URL_ENCODER.encodeToString(digest.digest(json.getBytes(StandardCharsets.UTF_8)));
         } catch (GeneralSecurityException e) {
             throw new IllegalStateException("SHA-256 is not available", e);
         }

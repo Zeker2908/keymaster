@@ -10,6 +10,7 @@ import ru.zeker.keymaster.domain.context.Actor;
 import ru.zeker.keymaster.domain.entity.AuditLog;
 import ru.zeker.keymaster.domain.entity.Principal;
 import ru.zeker.keymaster.domain.entity.Role;
+import ru.zeker.keymaster.domain.entity.SigningKey;
 import ru.zeker.keymaster.repository.AuditRepository;
 
 import java.util.Map;
@@ -20,8 +21,9 @@ public class AuditService {
 
     private static final String USER = "user";
     private static final String ROLE = "role";
+    private static final String KEY = "signingKey";
 
-    private final AuditRepository repository;
+    private final AuditRepository audits;
     private final ObjectMapper mapper;
 
     public Uni<Void> recordUser(Actor actor, AuditAction action, Principal principal, Map<String, ?> details) {
@@ -32,16 +34,20 @@ public class AuditService {
         return record(actor, action, ROLE, role.getId().toString(), Map.of());
     }
 
+    public Uni<Void> recordKey(AuditAction action, SigningKey signingKey, Map<String, ?> details) {
+        return record(null, action, KEY, signingKey.getKid(), details);
+    }
+
     public Uni<Void> record(Actor actor, AuditAction action, String targetType,
                             String targetId, Map<String, ?> details) {
         AuditLog e = AuditLog.builder()
-                .actorId(actor.userId())
+                .actorId(actor != null ? actor.userId() : null)
                 .action(action.code())
                 .targetType(targetType)
                 .targetId(targetId)
                 .details(mapper.valueToTree(details))
-                .requestId(actor.requestId())
+                .requestId(actor != null ? actor.requestId() : null)
                 .build();
-        return repository.persist(e).replaceWithVoid();
+        return audits.persist(e).replaceWithVoid();
     }
 }
