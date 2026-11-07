@@ -90,9 +90,9 @@ public class SigningKeyService {
                 .chain(exists -> exists
                         ? Uni.createFrom().item(false)
                         : Uni.createFrom().failure(new IllegalStateException(
-                                "Initial signing key creation failed: another instance won the race, "
-                                        + "but no signing key exists. Check the database and master key configuration.",
-                                failure)));
+                        "Initial signing key creation failed: another instance won the race, "
+                                + "but no signing key exists. Check the database and master key configuration.",
+                        failure)));
     }
 
     private boolean isScheduleConflict(Throwable failure) {

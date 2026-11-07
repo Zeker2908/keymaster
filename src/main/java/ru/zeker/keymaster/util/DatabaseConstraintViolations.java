@@ -15,7 +15,8 @@ public final class DatabaseConstraintViolations {
     private static final Pattern CONSTRAINT_IN_MESSAGE =
             Pattern.compile("(?:unique|exclusion) constraint \"([^\"]+)\"");
 
-    private DatabaseConstraintViolations() {}
+    private DatabaseConstraintViolations() {
+    }
 
     public static Optional<String> constraintName(Throwable failure, String sqlState) {
         String name = null;

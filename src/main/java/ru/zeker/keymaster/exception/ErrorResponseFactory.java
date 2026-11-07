@@ -10,7 +10,6 @@ import ru.zeker.keymaster.exception.dto.ErrorDetail;
 import ru.zeker.keymaster.exception.dto.ErrorResponse;
 
 import java.time.Clock;
-import java.time.Instant;
 import java.util.List;
 
 @ApplicationScoped

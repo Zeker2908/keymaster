@@ -53,10 +53,14 @@ public abstract class IntegrationTestBase {
      */
     private final List<UUID> createdPrincipals = new CopyOnWriteArrayList<>();
 
-    /** Роли, созданные в течение теста. */
+    /**
+     * Роли, созданные в течение теста.
+     */
     private final List<String> createdRoles = new CopyOnWriteArrayList<>();
 
-    /** Назначения роли admin до теста; {@code null}, если снапшот не сделан. */
+    /**
+     * Назначения роли admin до теста; {@code null}, если снапшот не сделан.
+     */
     private List<UUID> adminsBeforeTest;
 
     @BeforeEach
@@ -86,12 +90,16 @@ public abstract class IntegrationTestBase {
 
     // --- HTTP-хелперы ---
 
-    /** Запрос от имени админа со случайным actor id. */
+    /**
+     * Запрос от имени админа со случайным actor id.
+     */
     protected RequestSpecification adminRequest() {
         return adminRequest(UUID.randomUUID());
     }
 
-    /** Запрос от имени админа с указанным actor id. */
+    /**
+     * Запрос от имени админа с указанным actor id.
+     */
     protected RequestSpecification adminRequest(UUID actorId) {
         return given()
                 .header(USER_ID_HEADER, actorId.toString())
@@ -115,7 +123,9 @@ public abstract class IntegrationTestBase {
         return response;
     }
 
-    /** {@code POST /admin/users} без проверки статуса. */
+    /**
+     * {@code POST /admin/users} без проверки статуса.
+     */
     protected Response postUser(String login, List<String> roles) {
         return postUser(Map.of(
                 "login", login,
@@ -124,12 +134,16 @@ public abstract class IntegrationTestBase {
         ));
     }
 
-    /** Создаёт пользователя с уникальным логином; требует ответа 201. */
+    /**
+     * Создаёт пользователя с уникальным логином; требует ответа 201.
+     */
     protected Response createUser(List<String> roles) {
         return createUser(uniqueLogin(), roles);
     }
 
-    /** Создаёт пользователя; требует ответа 201. */
+    /**
+     * Создаёт пользователя; требует ответа 201.
+     */
     protected Response createUser(String login, List<String> roles) {
         Response response = postUser(login, roles);
         assertEquals(201, response.statusCode(),
@@ -137,7 +151,9 @@ public abstract class IntegrationTestBase {
         return response;
     }
 
-    /** {@code POST /admin/admin/roles}; при ответе 201 роль регистрируется для чистки. */
+    /**
+     * {@code POST /admin/admin/roles}; при ответе 201 роль регистрируется для чистки.
+     */
     protected Response createRole(String name) {
         Response response = adminRequest()
                 .contentType(ContentType.JSON)
@@ -156,7 +172,9 @@ public abstract class IntegrationTestBase {
 
     // --- хелперы по БД ---
 
-    /** Считает колонку {@code c} первой строки результата. */
+    /**
+     * Считает колонку {@code c} первой строки результата.
+     */
     protected long count(String sql, Object parameter) {
         return pool.preparedQuery(sql)
                 .execute(Tuple.of(parameter))
@@ -164,7 +182,9 @@ public abstract class IntegrationTestBase {
                 .await().atMost(TIMEOUT);
     }
 
-    /** Считает колонку {@code c} первой строки результата запроса без параметров. */
+    /**
+     * Считает колонку {@code c} первой строки результата запроса без параметров.
+     */
     protected long count(String sql) {
         return pool.query(sql)
                 .execute()
@@ -172,7 +192,9 @@ public abstract class IntegrationTestBase {
                 .await().atMost(TIMEOUT);
     }
 
-    /** Принципалы, которым назначена роль {@code admin}. */
+    /**
+     * Принципалы, которым назначена роль {@code admin}.
+     */
     protected List<UUID> principalsWithAdminRole() {
         return pool.preparedQuery("""
                         SELECT pr.principal_id
@@ -190,7 +212,9 @@ public abstract class IntegrationTestBase {
                 .await().atMost(TIMEOUT);
     }
 
-    /** Уникальный логин в пределах ограничения {@code principal_login_chk}. */
+    /**
+     * Уникальный логин в пределах ограничения {@code principal_login_chk}.
+     */
     protected String uniqueLogin() {
         return "u-" + UUID.randomUUID().toString().substring(0, 8);
     }
@@ -203,7 +227,9 @@ public abstract class IntegrationTestBase {
                 .await().atMost(TIMEOUT);
     }
 
-    /** Удаляет роль, если на неё не осталось назначений (чтобы не падать на FK RESTRICT). */
+    /**
+     * Удаляет роль, если на неё не осталось назначений (чтобы не падать на FK RESTRICT).
+     */
     private void deleteRole(String name) {
         pool.preparedQuery("""
                         DELETE FROM keymaster.role r
