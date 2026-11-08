@@ -7,6 +7,7 @@ import java.security.KeyFactory;
 import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
@@ -29,11 +30,11 @@ public final class RsaKeyCodec {
         return publicKey.getEncoded();
     }
 
-    public static PublicKey publicFromSpki(byte[] encoded) {
+    public static RSAPublicKey publicFromSpki(byte[] encoded) {
         try {
             KeyFactory keyFactory = KeyFactory.getInstance(ALGORITHM);
 
-            return keyFactory.generatePublic(new X509EncodedKeySpec(encoded));
+            return (RSAPublicKey) keyFactory.generatePublic(new X509EncodedKeySpec(encoded));
         } catch (GeneralSecurityException e) {
             throw new IllegalArgumentException("Invalid RSA public key", e);
         }
@@ -43,11 +44,11 @@ public final class RsaKeyCodec {
         return privateKey.getEncoded();
     }
 
-    public static PrivateKey privateFromPkcs8(byte[] encoded) {
+    public static RSAPrivateKey privateFromPkcs8(byte[] encoded) {
         try {
             KeyFactory keyFactory = KeyFactory.getInstance(ALGORITHM);
 
-            return keyFactory.generatePrivate(new PKCS8EncodedKeySpec(encoded));
+            return (RSAPrivateKey) keyFactory.generatePrivate(new PKCS8EncodedKeySpec(encoded));
         } catch (GeneralSecurityException e) {
             throw new IllegalArgumentException("Invalid RSA private key", e);
         }

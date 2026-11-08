@@ -58,11 +58,21 @@ public class SigningKeyService {
     public Uni<List<KeyHeader>> listPublished() {
         Instant now = clock.instant();
 
-        return signingKeys.listPublishedCandidates(now)
-                .map(candidates -> candidates.stream()
-                        .filter(key -> lifecycle.isPublished(
-                                lifecycle.stateAt(key.timeline(), now)))
-                        .toList());
+        return Panache.withSession(() -> signingKeys.listPublishedCandidates(now))
+                .map(candidates -> {
+                    List<KeyHeader> published = candidates.stream()
+                            .filter(key -> lifecycle.isPublished(
+                                    lifecycle.stateAt(key.timeline(), now)))
+                            .toList();
+
+                    log.debug(
+                            "Found {} published signing keys out of {} candidates",
+                            published.size(),
+                            candidates.size()
+                    );
+
+                    return published;
+                });
     }
 
     private Uni<Void> createKey(KeyTimeline timeline, boolean initialKey) {
