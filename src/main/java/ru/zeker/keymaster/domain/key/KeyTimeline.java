@@ -1,5 +1,6 @@
 package ru.zeker.keymaster.domain.key;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 
@@ -7,6 +8,7 @@ import java.time.Instant;
 import java.util.Objects;
 
 @Embeddable
+@RegisterForReflection
 public record KeyTimeline(
         @Column(name = "publish_at", nullable = false) Instant publishAt,
         @Column(name = "activate_at", nullable = false) Instant activateAt,

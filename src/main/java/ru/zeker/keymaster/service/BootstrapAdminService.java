@@ -21,8 +21,6 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class BootstrapAdminService {
 
-    private static final Actor SYSTEM = new Actor(null, "bootstrap");
-
     private final PrincipalService principals;
     private final PrincipalRoleRepository principalRoles;
     private final Validator validator;
@@ -40,7 +38,7 @@ public class BootstrapAdminService {
                         return Uni.createFrom().failure(new ConstraintViolationException(violations));
                     }
 
-                    return principals.create(SYSTEM, request)
+                    return principals.create(Actor.SYSTEM, request)
                             .replaceWith(true)
                             .onFailure(this::isLoginConflict)
                             .recoverWithUni(this::failIfStillNoAdmin);

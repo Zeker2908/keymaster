@@ -8,6 +8,7 @@ import jakarta.ws.rs.container.PreMatching;
 import jakarta.ws.rs.ext.Provider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.MDC;
 import ru.zeker.keymaster.domain.context.RequestContext;
 
@@ -22,9 +23,14 @@ public class RequestContextFilter implements ContainerRequestFilter, ContainerRe
 
     private static final String REQUEST_ID_HEADER = "X-Request-Id";
     private static final String USER_ID_HEADER = "X-User-Id";
+    private static final String FORWARDED_FOR_HEADER = "X-Forwarded-For";
+
     private static final String MDC_KEY_REQUEST_ID = "requestId";
     private static final String MDC_KEY_USER_ID = "userId";
+    private static final String MDC_KEY_CLIENT_IP = "clientIp";
+
     private static final String REQUEST_START_TIME = "requestStartTime";
+
     private static final Pattern VALID_REQUEST_ID = Pattern.compile("[a-zA-Z0-9._-]{1,128}");
 
     private final RequestContext requestContext;
@@ -56,6 +62,10 @@ public class RequestContextFilter implements ContainerRequestFilter, ContainerRe
             }
         }
 
+        String clientIp = extractClientIp(request.getHeaderString(FORWARDED_FOR_HEADER));
+
+        requestContext.setClientIp(clientIp);
+
         log.info("HTTP request started: method={} path={}",
                 request.getMethod(),
                 request.getUriInfo().getRequestUri().getRawPath());
@@ -80,5 +90,20 @@ public class RequestContextFilter implements ContainerRequestFilter, ContainerRe
 
         MDC.remove(MDC_KEY_REQUEST_ID);
         MDC.remove(MDC_KEY_USER_ID);
+        MDC.remove(MDC_KEY_CLIENT_IP);
+    }
+
+    private String extractClientIp(String forwardedFor) {
+        if (StringUtils.isBlank(forwardedFor)) {
+            return null;
+        }
+
+        String clientIp = forwardedFor.split(",", 2)[0].trim();
+
+        if (clientIp.isBlank() || "unknown".equalsIgnoreCase(clientIp)) {
+            return null;
+        }
+
+        return clientIp;
     }
 }

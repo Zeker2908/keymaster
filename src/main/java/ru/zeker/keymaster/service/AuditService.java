@@ -34,8 +34,8 @@ public class AuditService {
         return record(actor, action, ROLE, role.getId().toString(), Map.of());
     }
 
-    public Uni<Void> recordKey(AuditAction action, SigningKey signingKey, Map<String, ?> details) {
-        return record(null, action, KEY, signingKey.getKid(), details);
+    public Uni<Void> recordKey(Actor actor, AuditAction action, SigningKey signingKey, Map<String, ?> details) {
+        return record(actor, action, KEY, signingKey.getKid(), details);
     }
 
     public Uni<Void> record(Actor actor, AuditAction action, String targetType,

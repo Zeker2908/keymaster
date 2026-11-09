@@ -6,6 +6,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ru.zeker.keymaster.domain.AuditAction;
+import ru.zeker.keymaster.domain.context.Actor;
 import ru.zeker.keymaster.domain.entity.SigningKey;
 import ru.zeker.keymaster.domain.key.EncryptedKey;
 import ru.zeker.keymaster.domain.key.GeneratedKey;
@@ -42,17 +43,17 @@ public class SigningKeyService {
         return Panache.withSession(signingKeys::existsAny)
                 .chain(exists -> exists
                         ? Uni.createFrom().item(false)
-                        : createKey(KeyTimeline.initial(clock.instant()), true).replaceWith(true))
+                        : createKey(Actor.SYSTEM, KeyTimeline.initial(clock.instant()), true).replaceWith(true))
                 .onFailure(this::isScheduleConflict)
                 .recoverWithUni(this::recheckAfterScheduleConflict);
     }
 
-    public Uni<Void> createKey() {
-        return createKey(KeyTimeline.initial(clock.instant()), true);
+    public Uni<Void> createKey(Actor actor) {
+        return createKey(actor, KeyTimeline.initial(clock.instant()), true);
     }
 
-    public Uni<Void> createKey(KeyTimeline timeline) {
-        return createKey(timeline, false);
+    public Uni<Void> createKey(Actor actor, KeyTimeline timeline) {
+        return createKey(actor, timeline, false);
     }
 
     public Uni<List<KeyHeader>> listPublished() {
@@ -75,7 +76,7 @@ public class SigningKeyService {
                 });
     }
 
-    private Uni<Void> createKey(KeyTimeline timeline, boolean initialKey) {
+    private Uni<Void> createKey(Actor actor, KeyTimeline timeline, boolean initialKey) {
         log.info("Starting signing key creation");
 
         lifecycle.validate(timeline, initialKey);
@@ -87,7 +88,7 @@ public class SigningKeyService {
                 .invoke(key -> log.debug("Signing key pair generated, kid={}", key.kid()))
                 .map(this::encryptKeyPair)
                 .map(pair -> mapper.toRsaEntity(pair, timeline))
-                .chain(key -> Panache.withTransaction(() -> persistKey(key)))
+                .chain(key -> Panache.withTransaction(() -> persistKey(actor, key)))
                 .invoke(() -> log.info("Signing key creation completed successfully"))
                 .onFailure(e -> !(initialKey && isScheduleConflict(e)))
                 .invoke(e -> log.error("Signing key creation failed: {}", e.getMessage()));
@@ -116,10 +117,10 @@ public class SigningKeyService {
         return false;
     }
 
-    private Uni<Void> persistKey(SigningKey key) {
+    private Uni<Void> persistKey(Actor actor, SigningKey key) {
         return signingKeys.create(key)
                 .invoke(sk -> log.info("Signing key {} successfully saved", sk.getKid()))
-                .call(sk -> audits.recordKey(AuditAction.KEY_CREATED, sk, AuditDetails.keyCreated(sk)))
+                .call(sk -> audits.recordKey(actor, AuditAction.KEY_CREATED, sk, AuditDetails.keyCreated(sk)))
                 .replaceWithVoid();
     }
 

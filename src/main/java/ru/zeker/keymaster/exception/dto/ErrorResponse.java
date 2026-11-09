@@ -1,8 +1,11 @@
 package ru.zeker.keymaster.exception.dto;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
 import java.time.Instant;
 import java.util.List;
 
+@RegisterForReflection
 public record ErrorResponse(
         Instant timestamp,
         int status,

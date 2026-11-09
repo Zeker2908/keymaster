@@ -5,6 +5,7 @@ import io.quarkus.vertx.VertxContextSupport;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import ru.zeker.keymaster.config.KeymasterConfig;
 import ru.zeker.keymaster.service.BootstrapAdminService;

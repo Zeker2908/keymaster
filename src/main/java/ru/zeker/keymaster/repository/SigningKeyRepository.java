@@ -19,7 +19,11 @@ public class SigningKeyRepository implements PanacheRepositoryBase<SigningKey, S
                                     k.kid,
                                     k.alg,
                                     k.publicKey,
-                                    k.timeline
+                                    k.timeline.publishAt,
+                                    k.timeline.activateAt,
+                                    k.timeline.retireAt,
+                                    k.timeline.removeAt,
+                                    k.timeline.revokedAt
                                 )
                                 FROM SigningKey k
                                 WHERE k.timeline.publishAt <= :now

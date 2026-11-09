@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import ru.zeker.keymaster.IntegrationTestBase;
 import ru.zeker.keymaster.config.KeymasterConfig;
 import ru.zeker.keymaster.domain.Algorithm;
+import ru.zeker.keymaster.domain.context.Actor;
 import ru.zeker.keymaster.domain.entity.SigningKey;
 import ru.zeker.keymaster.domain.key.EncryptedKey;
 import ru.zeker.keymaster.domain.key.KeyHeader;
@@ -126,7 +127,7 @@ class SigningKeyAcceptanceTest extends IntegrationTestBase {
         long auditsBefore = countAudits();
 
         IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
-                () -> keys.createKey(tooShortLead));
+                () -> keys.createKey(Actor.SYSTEM, tooShortLead));
 
         assertTrue(failure.getMessage().contains("Activation must be scheduled at least"));
         assertEquals(keysBefore, countKeys());
@@ -144,7 +145,7 @@ class SigningKeyAcceptanceTest extends IntegrationTestBase {
         long auditsBefore = countAudits();
 
         Throwable failure = assertThrows(Throwable.class,
-                () -> run(() -> keys.createKey(overlap)));
+                () -> run(() -> keys.createKey(Actor.SYSTEM, overlap)));
 
         KeyMasterException domain = findCause(failure, KeyMasterException.class);
         assertNotNull(domain, () -> "expected domain exception, got: " + failure);
@@ -319,7 +320,7 @@ class SigningKeyAcceptanceTest extends IntegrationTestBase {
     }
 
     private String createScheduledKey(KeyTimeline timeline) throws Throwable {
-        run(() -> keys.createKey(timeline));
+        run(() -> keys.createKey(Actor.SYSTEM, timeline));
 
         String kid = pool.preparedQuery("""
                         SELECT kid

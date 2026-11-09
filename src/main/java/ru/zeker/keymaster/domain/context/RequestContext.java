@@ -12,8 +12,9 @@ import java.util.UUID;
 public class RequestContext {
     private String requestId;
     private UUID userId;
+    private String clientIp;
 
     public Actor actor() {
-        return new Actor(userId, requestId);
+        return new Actor(userId, requestId, clientIp);
     }
 }
