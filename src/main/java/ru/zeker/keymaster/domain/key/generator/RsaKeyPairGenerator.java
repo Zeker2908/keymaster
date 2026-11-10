@@ -12,12 +12,17 @@ import java.security.interfaces.RSAPublicKey;
 public class RsaKeyPairGenerator implements KeyPairGeneratorStrategy {
 
     private static final String ALGORITHM = "RSA";
-    private static final int KEY_SIZE = 2048;
+
+    private final int keySize;
+
+    public RsaKeyPairGenerator(int keySize) {
+        this.keySize = keySize;
+    }
 
     @Override
     public GeneratedKey generate() throws GeneralSecurityException {
         KeyPairGenerator generator = KeyPairGenerator.getInstance(ALGORITHM);
-        generator.initialize(KEY_SIZE);
+        generator.initialize(keySize);
 
         KeyPair keyPair = generator.generateKeyPair();
 

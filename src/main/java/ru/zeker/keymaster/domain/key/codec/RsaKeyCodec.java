@@ -12,14 +12,10 @@ import java.security.interfaces.RSAPublicKey;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
-import java.util.Base64;
 
 public final class RsaKeyCodec {
 
     private static final String ALGORITHM = "RSA";
-    private static final String SHA_256 = "SHA-256";
-
-    private static final Base64.Encoder BASE64_URL_ENCODER = Base64.getUrlEncoder().withoutPadding();
 
     private static final String E_S_KTY_RSA_N_S = "{\"e\":\"%s\",\"kty\":\"RSA\",\"n\":\"%s\"}";
 
@@ -66,9 +62,9 @@ public final class RsaKeyCodec {
         String json = E_S_KTY_RSA_N_S.formatted(jwkE(publicKey), jwkN(publicKey));
 
         try {
-            MessageDigest digest = MessageDigest.getInstance(SHA_256);
+            MessageDigest digest = MessageDigest.getInstance(Codecs.SHA_256);
 
-            return BASE64_URL_ENCODER.encodeToString(digest.digest(json.getBytes(StandardCharsets.UTF_8)));
+            return Codecs.BASE64_URL_ENCODER.encodeToString(digest.digest(json.getBytes(StandardCharsets.UTF_8)));
         } catch (GeneralSecurityException e) {
             throw new IllegalStateException("SHA-256 is not available", e);
         }
@@ -81,6 +77,6 @@ public final class RsaKeyCodec {
             bytes = Arrays.copyOfRange(bytes, 1, bytes.length);
         }
 
-        return BASE64_URL_ENCODER.encodeToString(bytes);
+        return Codecs.BASE64_URL_ENCODER.encodeToString(bytes);
     }
 }

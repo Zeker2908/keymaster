@@ -3,6 +3,7 @@ package ru.zeker.keymaster.config;
 import io.smallrye.config.ConfigMapping;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import ru.zeker.keymaster.config.validation.ValidMasterKey;
 import ru.zeker.keymaster.domain.Algorithm;
@@ -24,6 +25,9 @@ public interface KeymasterConfig {
 
     @Valid
     Bootstrap bootstrap();
+
+    @Valid
+    Signing signing();
 
     @Valid
     Keys keys();
@@ -67,8 +71,12 @@ public interface KeymasterConfig {
 
         interface SigningKey {
             boolean enabled();
-            Algorithm algorithm();
         }
+    }
+
+    interface Signing {
+        @NotNull
+        Algorithm algorithm();
     }
 
     interface Keys {
