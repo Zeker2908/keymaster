@@ -102,8 +102,8 @@ public class GlobalExceptionMapper {
     }
 
     @ServerExceptionMapper
-    public Response handleUnexpected(Exception exception, UriInfo uriInfo) {
-        log.error("Unhandled exception while processing request: {}", path(uriInfo), exception);
+    public Response handleUnexpected(Throwable throwable, UriInfo uriInfo) {
+        log.error("Unhandled exception while processing request: {}", path(uriInfo), throwable);
 
         return errorResponseFactory.create(
                 Response.Status.INTERNAL_SERVER_ERROR,

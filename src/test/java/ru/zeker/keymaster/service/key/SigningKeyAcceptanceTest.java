@@ -18,7 +18,7 @@ import ru.zeker.keymaster.domain.entity.SigningKey;
 import ru.zeker.keymaster.domain.key.EncryptedKey;
 import ru.zeker.keymaster.domain.key.KeyHeader;
 import ru.zeker.keymaster.domain.key.KeyTimeline;
-import ru.zeker.keymaster.domain.key.RsaKeyCodec;
+import ru.zeker.keymaster.domain.key.codec.RsaKeyCodec;
 import ru.zeker.keymaster.exception.ErrorCode;
 import ru.zeker.keymaster.exception.KeyMasterException;
 import ru.zeker.keymaster.repository.SigningKeyRepository;
@@ -127,7 +127,7 @@ class SigningKeyAcceptanceTest extends IntegrationTestBase {
         long auditsBefore = countAudits();
 
         IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
-                () -> keys.createKey(Actor.SYSTEM, tooShortLead));
+                () -> keys.createKey(Actor.SYSTEM, tooShortLead, Algorithm.RS256));
 
         assertTrue(failure.getMessage().contains("Activation must be scheduled at least"));
         assertEquals(keysBefore, countKeys());
@@ -145,7 +145,7 @@ class SigningKeyAcceptanceTest extends IntegrationTestBase {
         long auditsBefore = countAudits();
 
         Throwable failure = assertThrows(Throwable.class,
-                () -> run(() -> keys.createKey(Actor.SYSTEM, overlap)));
+                () -> run(() -> keys.createKey(Actor.SYSTEM, overlap, Algorithm.RS256)));
 
         KeyMasterException domain = findCause(failure, KeyMasterException.class);
         assertNotNull(domain, () -> "expected domain exception, got: " + failure);
@@ -316,11 +316,11 @@ class SigningKeyAcceptanceTest extends IntegrationTestBase {
     // --- helpers ---
 
     private void ensureInitialKey() throws Throwable {
-        run(() -> keys.ensureInitialKey());
+        run(() -> keys.ensureInitialKey(Algorithm.RS256));
     }
 
     private String createScheduledKey(KeyTimeline timeline) throws Throwable {
-        run(() -> keys.createKey(Actor.SYSTEM, timeline));
+        run(() -> keys.createKey(Actor.SYSTEM, timeline, Algorithm.RS256));
 
         String kid = pool.preparedQuery("""
                         SELECT kid

@@ -29,7 +29,7 @@ public class RoleRepository implements PanacheRepositoryBase<Role, UUID> {
 
     public Uni<List<Role>> findByNameIn(Collection<String> names) {
         if (names == null || names.isEmpty()) {
-            return Uni.createFrom().item(List.of());
+            return Uni.createFrom().item(List::of);
         }
         return find("name in ?1", List.copyOf(names)).list();
     }

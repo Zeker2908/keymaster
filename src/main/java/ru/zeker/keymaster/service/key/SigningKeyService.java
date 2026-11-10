@@ -5,6 +5,7 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import ru.zeker.keymaster.domain.Algorithm;
 import ru.zeker.keymaster.domain.AuditAction;
 import ru.zeker.keymaster.domain.context.Actor;
 import ru.zeker.keymaster.domain.entity.SigningKey;
@@ -39,21 +40,22 @@ public class SigningKeyService {
     private final SigningKeyMapper mapper;
     private final Clock clock;
 
-    public Uni<Boolean> ensureInitialKey() {
+    public Uni<Boolean> ensureInitialKey(Algorithm algorithm) {
         return Panache.withSession(signingKeys::existsAny)
                 .chain(exists -> exists
                         ? Uni.createFrom().item(false)
-                        : createKey(Actor.SYSTEM, KeyTimeline.initial(clock.instant()), true).replaceWith(true))
+                        : createKey(Actor.SYSTEM, KeyTimeline.initial(clock.instant()), algorithm, true)
+                        .replaceWith(true))
                 .onFailure(this::isScheduleConflict)
                 .recoverWithUni(this::recheckAfterScheduleConflict);
     }
 
-    public Uni<Void> createKey(Actor actor) {
-        return createKey(actor, KeyTimeline.initial(clock.instant()), true);
+    public Uni<Void> createKey(Actor actor, Algorithm algorithm) {
+        return createKey(actor, KeyTimeline.initial(clock.instant()), algorithm, true);
     }
 
-    public Uni<Void> createKey(Actor actor, KeyTimeline timeline) {
-        return createKey(actor, timeline, false);
+    public Uni<Void> createKey(Actor actor, KeyTimeline timeline, Algorithm algorithm) {
+        return createKey(actor, timeline, algorithm, false);
     }
 
     public Uni<List<KeyHeader>> listPublished() {
@@ -76,7 +78,7 @@ public class SigningKeyService {
                 });
     }
 
-    private Uni<Void> createKey(Actor actor, KeyTimeline timeline, boolean initialKey) {
+    private Uni<Void> createKey(Actor actor, KeyTimeline timeline, Algorithm algorithm, boolean initialKey) {
         log.info("Starting signing key creation");
 
         lifecycle.validate(timeline, initialKey);
@@ -84,10 +86,10 @@ public class SigningKeyService {
         log.debug("Signing key timeline validated: publishAt={}, activateAt={}",
                 timeline.publishAt(), timeline.activateAt());
 
-        return generator.generate()
+        return generator.generate(algorithm)
                 .invoke(key -> log.debug("Signing key pair generated, kid={}", key.kid()))
                 .map(this::encryptKeyPair)
-                .map(pair -> mapper.toRsaEntity(pair, timeline))
+                .map(pair -> mapper.toEntity(pair, timeline, algorithm))
                 .chain(key -> Panache.withTransaction(() -> persistKey(actor, key)))
                 .invoke(() -> log.info("Signing key creation completed successfully"))
                 .onFailure(e -> !(initialKey && isScheduleConflict(e)))

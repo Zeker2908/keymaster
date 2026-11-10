@@ -6,6 +6,7 @@ import io.quarkus.vertx.VertxContextSupport;
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
+import ru.zeker.keymaster.domain.Algorithm;
 import ru.zeker.keymaster.exception.ErrorCode;
 import ru.zeker.keymaster.exception.KeyMasterException;
 import ru.zeker.keymaster.repository.SigningKeyRepository;
@@ -39,7 +40,7 @@ class SigningKeyServiceRaceTest {
                 .thenReturn(Uni.createFrom().failure(scheduleConflict()));
         QuarkusMock.installMockForType(repository, SigningKeyRepository.class);
 
-        boolean created = VertxContextSupport.subscribeAndAwait(() -> keys.ensureInitialKey()
+        boolean created = VertxContextSupport.subscribeAndAwait(() -> keys.ensureInitialKey(Algorithm.RS256)
                 .ifNoItem()
                 .after(TIMEOUT)
                 .fail());
@@ -58,7 +59,7 @@ class SigningKeyServiceRaceTest {
         QuarkusMock.installMockForType(repository, SigningKeyRepository.class);
 
         Throwable failure = assertThrows(Throwable.class, () ->
-                VertxContextSupport.subscribeAndAwait(() -> keys.ensureInitialKey()
+                VertxContextSupport.subscribeAndAwait(() -> keys.ensureInitialKey(Algorithm.RS256)
                         .ifNoItem()
                         .after(TIMEOUT)
                         .fail()));

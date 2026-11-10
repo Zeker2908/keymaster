@@ -28,7 +28,7 @@ public class BootstrapSigningKeyInitializer {
             return;
         }
 
-        boolean created = VertxContextSupport.subscribeAndAwait(() -> keys.ensureInitialKey()
+        boolean created = VertxContextSupport.subscribeAndAwait(() -> keys.ensureInitialKey(config.algorithm())
                 .ifNoItem()
                 .after(Duration.ofSeconds(30))
                 .fail());

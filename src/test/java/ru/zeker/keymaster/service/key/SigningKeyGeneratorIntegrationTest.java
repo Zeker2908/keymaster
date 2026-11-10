@@ -6,7 +6,8 @@ import io.quarkus.test.vertx.RunOnVertxContext;
 import io.quarkus.test.vertx.UniAsserter;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
-import ru.zeker.keymaster.domain.key.RsaKeyCodec;
+import ru.zeker.keymaster.domain.Algorithm;
+import ru.zeker.keymaster.domain.key.codec.RsaKeyCodec;
 import ru.zeker.keymaster.repository.PrincipalRepository;
 
 import java.security.interfaces.RSAPublicKey;
@@ -28,7 +29,7 @@ class SigningKeyGeneratorIntegrationTest {
     @RunOnVertxContext
     void reactiveSessionWorksAfterGeneration(UniAsserter asserter) {
         asserter.assertThat(
-                () -> generator.generate()
+                () -> generator.generate(Algorithm.RS256)
                         .invoke(key -> {
                             assertNotNull(key);
                             RSAPublicKey publicKey = (RSAPublicKey) RsaKeyCodec.publicFromSpki(key.publicSpki());

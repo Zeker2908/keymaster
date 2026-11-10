@@ -72,6 +72,7 @@ public final class KeyCipher {
 
         try {
 
+            //TODO: добавить поддержку полноценной ротации
             if (encryptedKey.masterKeyVersion() != MASTER_KEY_VERSION) {
                 throw new GeneralSecurityException();
             }

@@ -1,5 +1,8 @@
 package ru.zeker.keymaster.domain.key;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
+@RegisterForReflection
 public record EncryptedKey(
         byte[] ciphertext,
         byte[] nonce,

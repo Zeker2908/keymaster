@@ -3,6 +3,7 @@ package ru.zeker.keymaster.domain.key;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.util.Base64URL;
 import org.junit.jupiter.api.Test;
+import ru.zeker.keymaster.domain.key.codec.RsaKeyCodec;
 
 import java.math.BigInteger;
 import java.security.KeyFactory;

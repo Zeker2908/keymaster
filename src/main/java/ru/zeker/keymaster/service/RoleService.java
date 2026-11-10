@@ -51,7 +51,7 @@ public class RoleService {
     public Uni<List<Role>> resolve(Collection<String> rawNames) {
         List<String> names = normalize(rawNames);
         if (names.isEmpty()) {
-            return Uni.createFrom().item(List.of());
+            return Uni.createFrom().item(List::of);
         }
 
         return roles.findByNameIn(names).map(found -> {

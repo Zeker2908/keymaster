@@ -8,6 +8,7 @@ import ru.zeker.keymaster.domain.key.KeyHeader;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 @ApplicationScoped
 public class SigningKeyRepository implements PanacheRepositoryBase<SigningKey, String> {
@@ -32,6 +33,11 @@ public class SigningKeyRepository implements PanacheRepositoryBase<SigningKey, S
                                 """, KeyHeader.class)
                         .setParameter("now", now)
                         .getResultList());
+    }
+
+    public Uni<SigningKey> findByKid(String kid) {
+        return find("kid = ?1", kid)
+                .firstResult();
     }
 
     public Uni<Boolean> existsAny() {

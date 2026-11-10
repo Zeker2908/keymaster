@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 import ru.zeker.keymaster.IntegrationTestBase;
 import ru.zeker.keymaster.domain.Algorithm;
 import ru.zeker.keymaster.domain.key.KeyTimeline;
-import ru.zeker.keymaster.domain.key.RsaKeyCodec;
+import ru.zeker.keymaster.domain.key.codec.RsaKeyCodec;
 
 import java.math.BigInteger;
 import java.security.KeyPair;

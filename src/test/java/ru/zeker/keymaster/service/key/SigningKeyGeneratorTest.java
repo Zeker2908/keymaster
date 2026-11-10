@@ -3,8 +3,9 @@ package ru.zeker.keymaster.service.key;
 import io.vertx.core.Vertx;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import ru.zeker.keymaster.domain.Algorithm;
 import ru.zeker.keymaster.domain.key.GeneratedKey;
-import ru.zeker.keymaster.domain.key.RsaKeyCodec;
+import ru.zeker.keymaster.domain.key.codec.RsaKeyCodec;
 import ru.zeker.keymaster.exception.ServiceOverloadedException;
 
 import java.security.interfaces.RSAPublicKey;
@@ -51,7 +52,7 @@ class SigningKeyGeneratorTest {
 
             vertx.runOnContext(ignored -> {
                 assertTrue(Vertx.currentContext().isEventLoopContext());
-                generator.generate().subscribe().with(
+                generator.generate(Algorithm.RS256).subscribe().with(
                         result::complete,
                         result::completeExceptionally
                 );
@@ -107,7 +108,7 @@ class SigningKeyGeneratorTest {
 
         try {
             assertThrows(ServiceOverloadedException.class,
-                    () -> generator.generate().await().indefinitely());
+                    () -> generator.generate(Algorithm.RS256).await().indefinitely());
         } finally {
             releaseWorker.countDown();
         }

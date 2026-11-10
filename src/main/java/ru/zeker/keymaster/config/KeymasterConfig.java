@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 import ru.zeker.keymaster.config.validation.ValidMasterKey;
+import ru.zeker.keymaster.domain.Algorithm;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -66,6 +67,7 @@ public interface KeymasterConfig {
 
         interface SigningKey {
             boolean enabled();
+            Algorithm algorithm();
         }
     }
 

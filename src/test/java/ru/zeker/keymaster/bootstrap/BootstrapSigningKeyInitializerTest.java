@@ -7,6 +7,7 @@ import jakarta.inject.Inject;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import ru.zeker.keymaster.IntegrationTestBase;
+import ru.zeker.keymaster.domain.Algorithm;
 import ru.zeker.keymaster.service.key.SigningKeyService;
 
 import java.time.Duration;
@@ -50,7 +51,7 @@ class BootstrapSigningKeyInitializerTest extends IntegrationTestBase {
         String createdAtBefore = singleKeyCreatedAt();
 
         boolean created = VertxContextSupport.subscribeAndAwait(() ->
-                keys.ensureInitialKey()
+                keys.ensureInitialKey(Algorithm.RS256)
                         .ifNoItem()
                         .after(TIMEOUT)
                         .fail());
@@ -76,7 +77,7 @@ class BootstrapSigningKeyInitializerTest extends IntegrationTestBase {
                     start.await();
                     try {
                         return VertxContextSupport.subscribeAndAwait(() ->
-                                keys.ensureInitialKey()
+                                keys.ensureInitialKey(Algorithm.RS256)
                                         .ifNoItem()
                                         .after(Duration.ofSeconds(60))
                                         .fail());

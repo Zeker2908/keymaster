@@ -1,4 +1,4 @@
-package ru.zeker.keymaster.domain.key;
+package ru.zeker.keymaster.domain.key.codec;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
