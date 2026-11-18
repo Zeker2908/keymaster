@@ -210,7 +210,7 @@ class SigningKeyAcceptanceTest extends IntegrationTestBase {
         );
 
         SigningKeyRepository mockedRepository = mock(SigningKeyRepository.class);
-        when(mockedRepository.listPublishedCandidates(any()))
+        when(mockedRepository.listPublishedKeys(any()))
                 .thenReturn(Uni.createFrom().item(all));
         QuarkusMock.installMockForType(mockedRepository, SigningKeyRepository.class);
 

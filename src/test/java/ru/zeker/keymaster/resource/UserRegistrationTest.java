@@ -59,7 +59,7 @@ class UserRegistrationTest extends IntegrationTestBase {
                         "roles", List.of("missing-role")
                 ))
                 .when()
-                .post("/admin/users")
+                .post("/v1/admin/users")
                 .then()
                 .statusCode(400)
                 .body("error", equalTo("UNKNOWN_ROLE"));
@@ -117,7 +117,7 @@ class UserRegistrationTest extends IntegrationTestBase {
                         "roles", List.of("admin")
                 ))
                 .when()
-                .post("/admin/users")
+                .post("/v1/admin/users")
                 .then()
                 .statusCode(400)
                 .body("error", equalTo("PASSWORD_POLICY_VIOLATION"))

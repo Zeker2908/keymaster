@@ -213,6 +213,6 @@ class RoleRevocationTest extends IntegrationTestBase {
     private Response revokeRole(String userId, String role) {
         return adminRequest()
                 .when()
-                .delete("/admin/users/{id}/roles/{role}", userId, role);
+                .delete("/v1/admin/users/{id}/roles/{role}", userId, role);
     }
 }

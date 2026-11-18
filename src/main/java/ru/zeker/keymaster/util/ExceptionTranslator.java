@@ -23,6 +23,10 @@ public final class ExceptionTranslator {
     }
 
     public static Throwable translate(Throwable failure) {
+        if (failure instanceof KeyMasterException) {
+            return failure;
+        }
+
         Optional<String> constraint = DatabaseConstraintViolations.constraintName(
                         failure, DatabaseConstraintViolations.UNIQUE_VIOLATION)
                 .or(() -> DatabaseConstraintViolations.constraintName(

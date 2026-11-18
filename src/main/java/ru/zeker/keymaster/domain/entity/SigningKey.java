@@ -27,7 +27,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @Entity
 @Table(name = "signing_key")
-public class SigningKey {
+public class SigningKey extends AbstractEntity {
 
     public static final String KEY_SCHEDULE_EXCL = "signing_key_single_signer";
 
@@ -68,4 +68,8 @@ public class SigningKey {
         return new EncryptedKey(privateKeyEnc.clone(), nonce.clone(), masterKeyVersion);
     }
 
+    @Override
+    protected Object getId() {
+        return kid;
+    }
 }

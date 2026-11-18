@@ -14,8 +14,7 @@ CREATE TABLE principal (
 CREATE TABLE credential (
     principal_id uuid        PRIMARY KEY REFERENCES principal (id) ON DELETE CASCADE,
     secret_hash  text        NOT NULL,
-    changed_at   timestamptz NOT NULL DEFAULT now(),
-    CONSTRAINT credential_hash_chk CHECK (secret_hash LIKE '$argon2id$%')
+    changed_at   timestamptz NOT NULL DEFAULT now()
 );
 
 CREATE TABLE role (

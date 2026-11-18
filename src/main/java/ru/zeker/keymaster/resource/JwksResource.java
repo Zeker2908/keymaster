@@ -11,7 +11,7 @@ import jakarta.ws.rs.core.Response;
 import lombok.RequiredArgsConstructor;
 import ru.zeker.keymaster.service.jwk.JwksBuilder;
 
-@Path("/jwks")
+@Path("/v1/jwks")
 @ApplicationScoped
 @RequiredArgsConstructor
 @Produces(MediaType.APPLICATION_JSON)

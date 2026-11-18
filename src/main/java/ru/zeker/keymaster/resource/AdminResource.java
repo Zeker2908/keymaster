@@ -27,7 +27,7 @@ import ru.zeker.keymaster.service.RoleService;
 
 import java.util.UUID;
 
-@Path("/admin")
+@Path("/v1/admin")
 @RequireAdmin
 @ApplicationScoped
 @RequiredArgsConstructor
@@ -44,7 +44,7 @@ public class AdminResource {
     public Uni<Response> createUser(@Valid NewUserRequest request) {
         return principals.create(context.actor(), request)
                 .map(user -> Response.created(
-                                UriBuilder.fromPath("/admin/users/{id}").build(user.id()))
+                                UriBuilder.fromPath("/v1/admin/users/{id}").build(user.id()))
                         .entity(user)
                         .build());
     }

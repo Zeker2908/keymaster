@@ -4,6 +4,7 @@ import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
+import io.quarkus.hibernate.reactive.panache.Panache;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.vertx.VertxContextSupport;
@@ -17,10 +18,12 @@ import ru.zeker.keymaster.IntegrationTestBase;
 import ru.zeker.keymaster.SigningKeyTestStore;
 import ru.zeker.keymaster.SigningKeyTestStore.StoredKey;
 import ru.zeker.keymaster.domain.Algorithm;
+import ru.zeker.keymaster.domain.entity.SigningKey;
 import ru.zeker.keymaster.domain.key.EncryptedKey;
 import ru.zeker.keymaster.domain.key.KeyHeader;
 import ru.zeker.keymaster.domain.key.SigningKeyData;
 import ru.zeker.keymaster.domain.key.codec.EcKeyCodec;
+import ru.zeker.keymaster.repository.SigningKeyRepository;
 import ru.zeker.keymaster.service.jwk.JwksBuilder;
 import ru.zeker.keymaster.service.key.KeyCipher;
 import ru.zeker.keymaster.service.key.SigningKeyCache;
@@ -75,6 +78,9 @@ class BootstrapSigningKeyAlgorithmIntegrationTest extends IntegrationTestBase {
 
     @Inject
     SigningKeyCache cache;
+
+    @Inject
+    SigningKeyRepository repository;
 
     @Inject
     KeyCipher cipher;
@@ -134,7 +140,10 @@ class BootstrapSigningKeyAlgorithmIntegrationTest extends IntegrationTestBase {
                 "расшифрованный приватный ключ должен быть DER-структурой PKCS#8");
         assertNotNull(algorithm.getPrivateKeyDecoder().apply(decryptedPrivateKey));
 
-        SigningKeyData cached = run(() -> cache.get(kid));
+        SigningKey entity = run(() -> Panache.withSession(() -> repository.findByKid(kid)));
+        assertNotNull(entity, "ключ должен существовать в БД");
+
+        SigningKeyData cached = run(() -> cache.get(entity));
 
         assertEquals(kid, cached.kid());
         assertEquals(algorithm, cached.algorithm());

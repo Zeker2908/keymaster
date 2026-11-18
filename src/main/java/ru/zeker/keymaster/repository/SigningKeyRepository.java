@@ -8,12 +8,23 @@ import ru.zeker.keymaster.domain.key.KeyHeader;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 
 @ApplicationScoped
 public class SigningKeyRepository implements PanacheRepositoryBase<SigningKey, String> {
 
-    public Uni<List<KeyHeader>> listPublishedCandidates(Instant now) {
+    public Uni<SigningKey> findActiveKey(Instant now) {
+        return getSession()
+                .chain(session -> session.createQuery("""
+                                FROM SigningKey k
+                                WHERE k.timeline.activateAt <= :now
+                                  AND (k.timeline.retireAt IS NULL OR k.timeline.retireAt > :now)
+                                  AND (k.timeline.revokedAt IS NULL OR k.timeline.revokedAt > :now)
+                                """, SigningKey.class)
+                        .setParameter("now", now)
+                        .getSingleResultOrNull());
+    }
+
+    public Uni<List<KeyHeader>> listPublishedKeys(Instant now) {
         return getSession()
                 .chain(session -> session.createQuery("""
                                 SELECT new ru.zeker.keymaster.domain.key.KeyHeader(

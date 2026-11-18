@@ -17,7 +17,7 @@ public final class PasswordPolicy {
     private static final int MAX_LENGTH = 64;
 
     public List<PasswordViolation> validate(String login, char[] password) {
-        char[] normalized = Secrets.normalize(password);
+        char[] normalized = Secrets.normalize(password.clone());
         try {
             return validateNormalized(login, normalized);
         } finally {

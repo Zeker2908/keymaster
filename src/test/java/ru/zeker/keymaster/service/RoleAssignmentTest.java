@@ -141,6 +141,6 @@ class RoleAssignmentTest extends IntegrationTestBase {
     private Response assignRole(String userId, String role) {
         return adminRequest()
                 .when()
-                .put("/admin/users/{id}/roles/{role}", userId, role);
+                .put("/v1/admin/users/{id}/roles/{role}", userId, role);
     }
 }

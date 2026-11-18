@@ -27,7 +27,7 @@ class AdminResourceIntegrationTest extends IntegrationTestBase {
         given()
                 .header(USER_ROLES_HEADER, "admin")
                 .when()
-                .get("/admin/users/{id}", UUID.randomUUID())
+                .get("/v1/admin/users/{id}", UUID.randomUUID())
                 .then()
                 .statusCode(401)
                 .body("error", equalTo("UNAUTHORIZED"));
@@ -38,7 +38,7 @@ class AdminResourceIntegrationTest extends IntegrationTestBase {
         given()
                 .header(USER_ID_HEADER, UUID.randomUUID().toString())
                 .when()
-                .get("/admin/users/{id}", UUID.randomUUID())
+                .get("/v1/admin/users/{id}", UUID.randomUUID())
                 .then()
                 .statusCode(401)
                 .body("error", equalTo("UNAUTHORIZED"));
@@ -50,7 +50,7 @@ class AdminResourceIntegrationTest extends IntegrationTestBase {
                 .header(USER_ID_HEADER, UUID.randomUUID().toString())
                 .header(USER_ROLES_HEADER, "viewer")
                 .when()
-                .get("/admin/users/{id}", UUID.randomUUID())
+                .get("/v1/admin/users/{id}", UUID.randomUUID())
                 .then()
                 .statusCode(403)
                 .body("error", equalTo("FORBIDDEN"));
@@ -70,7 +70,7 @@ class AdminResourceIntegrationTest extends IntegrationTestBase {
                         "roles", List.of("admin")
                 ))
                 .when()
-                .post("/admin/users")
+                .post("/v1/admin/users")
                 .then()
                 .statusCode(403)
                 .body("error", equalTo("FORBIDDEN"));
@@ -88,7 +88,7 @@ class AdminResourceIntegrationTest extends IntegrationTestBase {
                 .header(USER_ID_HEADER, UUID.randomUUID().toString())
                 .header(USER_ROLES_HEADER, "viewer, admin")
                 .when()
-                .get("/admin/users/{id}", UUID.randomUUID())
+                .get("/v1/admin/users/{id}", UUID.randomUUID())
                 .then()
                 .statusCode(404)
                 .body("error", equalTo("USER_NOT_FOUND"));
@@ -111,7 +111,7 @@ class AdminResourceIntegrationTest extends IntegrationTestBase {
 
         String location = response.header("Location");
         assertNotNull(location);
-        assertTrue(location.endsWith("/admin/users/" + userId));
+        assertTrue(location.endsWith("/v1/admin/users/" + userId));
 
         assertEquals(1L, count("""
                 SELECT count(*) AS c
@@ -145,7 +145,7 @@ class AdminResourceIntegrationTest extends IntegrationTestBase {
                         "roles", List.of("admin")
                 ))
                 .when()
-                .post("/admin/users")
+                .post("/v1/admin/users")
                 .then()
                 .statusCode(400)
                 .body("status", equalTo(400));
@@ -157,7 +157,7 @@ class AdminResourceIntegrationTest extends IntegrationTestBase {
 
         adminRequest()
                 .when()
-                .get("/admin/users/{id}", userId)
+                .get("/v1/admin/users/{id}", userId)
                 .then()
                 .statusCode(404)
                 .body("error", equalTo("USER_NOT_FOUND"));
@@ -174,7 +174,7 @@ class AdminResourceIntegrationTest extends IntegrationTestBase {
     void rejectsInvalidUserIdOnGet() {
         adminRequest()
                 .when()
-                .get("/admin/users/not-a-uuid")
+                .get("/v1/admin/users/not-a-uuid")
                 .then()
                 .statusCode(400)
                 .body("status", equalTo(400));
@@ -186,19 +186,19 @@ class AdminResourceIntegrationTest extends IntegrationTestBase {
 
         adminRequest()
                 .when()
-                .put("/admin/users/{id}/roles/{role}", userId, "admin")
+                .put("/v1/admin/users/{id}/roles/{role}", userId, "admin")
                 .then()
                 .statusCode(204);
 
         adminRequest()
                 .when()
-                .put("/admin/users/{id}/roles/{role}", userId, "admin")
+                .put("/v1/admin/users/{id}/roles/{role}", userId, "admin")
                 .then()
                 .statusCode(204);
 
         adminRequest()
                 .when()
-                .get("/admin/users/{id}", userId)
+                .get("/v1/admin/users/{id}", userId)
                 .then()
                 .statusCode(200)
                 .body("roles.size()", equalTo(1))
@@ -227,19 +227,19 @@ class AdminResourceIntegrationTest extends IntegrationTestBase {
 
         adminRequest()
                 .when()
-                .delete("/admin/users/{id}/roles/{role}", userId, "admin")
+                .delete("/v1/admin/users/{id}/roles/{role}", userId, "admin")
                 .then()
                 .statusCode(204);
 
         adminRequest()
                 .when()
-                .delete("/admin/users/{id}/roles/{role}", userId, "admin")
+                .delete("/v1/admin/users/{id}/roles/{role}", userId, "admin")
                 .then()
                 .statusCode(204);
 
         adminRequest()
                 .when()
-                .get("/admin/users/{id}", userId)
+                .get("/v1/admin/users/{id}", userId)
                 .then()
                 .statusCode(200)
                 .body("roles.size()", equalTo(0));
@@ -266,14 +266,14 @@ class AdminResourceIntegrationTest extends IntegrationTestBase {
 
         adminRequest()
                 .when()
-                .put("/admin/users/{id}/roles/{role}", userId, "admin")
+                .put("/v1/admin/users/{id}/roles/{role}", userId, "admin")
                 .then()
                 .statusCode(404)
                 .body("error", equalTo("USER_NOT_FOUND"));
 
         adminRequest()
                 .when()
-                .delete("/admin/users/{id}/roles/{role}", userId, "admin")
+                .delete("/v1/admin/users/{id}/roles/{role}", userId, "admin")
                 .then()
                 .statusCode(404)
                 .body("error", equalTo("USER_NOT_FOUND"));
@@ -285,14 +285,14 @@ class AdminResourceIntegrationTest extends IntegrationTestBase {
 
         adminRequest()
                 .when()
-                .put("/admin/users/{id}/roles/{role}", userId, "missing-role")
+                .put("/v1/admin/users/{id}/roles/{role}", userId, "missing-role")
                 .then()
                 .statusCode(404)
                 .body("error", equalTo("ROLE_NOT_FOUND"));
 
         adminRequest()
                 .when()
-                .delete("/admin/users/{id}/roles/{role}", userId, "missing-role")
+                .delete("/v1/admin/users/{id}/roles/{role}", userId, "missing-role")
                 .then()
                 .statusCode(404)
                 .body("error", equalTo("ROLE_NOT_FOUND"));
@@ -304,14 +304,14 @@ class AdminResourceIntegrationTest extends IntegrationTestBase {
 
         adminRequest()
                 .when()
-                .put("/admin/users/{id}/roles/{role}", userId, "Admin")
+                .put("/v1/admin/users/{id}/roles/{role}", userId, "Admin")
                 .then()
                 .statusCode(400)
                 .body("status", equalTo(400));
 
         adminRequest()
                 .when()
-                .delete("/admin/users/{id}/roles/{role}", userId, "Admin")
+                .delete("/v1/admin/users/{id}/roles/{role}", userId, "Admin")
                 .then()
                 .statusCode(400)
                 .body("status", equalTo(400));
@@ -321,14 +321,14 @@ class AdminResourceIntegrationTest extends IntegrationTestBase {
     void rejectsInvalidUserIdOnRoleMutations() {
         adminRequest()
                 .when()
-                .put("/admin/users/not-a-uuid/roles/admin")
+                .put("/v1/admin/users/not-a-uuid/roles/admin")
                 .then()
                 .statusCode(400)
                 .body("status", equalTo(400));
 
         adminRequest()
                 .when()
-                .delete("/admin/users/not-a-uuid/roles/admin")
+                .delete("/v1/admin/users/not-a-uuid/roles/admin")
                 .then()
                 .statusCode(400)
                 .body("status", equalTo(400));
@@ -348,7 +348,7 @@ class AdminResourceIntegrationTest extends IntegrationTestBase {
                         "roles", List.of()
                 ))
                 .when()
-                .post("/admin/users")
+                .post("/v1/admin/users")
                 .then()
                 .statusCode(409)
                 .body("error", equalTo("LOGIN_ALREADY_EXISTS"))
@@ -401,7 +401,7 @@ class AdminResourceIntegrationTest extends IntegrationTestBase {
                         "roles", List.of("unknown-role-" + UUID.randomUUID())
                 ))
                 .when()
-                .post("/admin/users")
+                .post("/v1/admin/users")
                 .then()
                 .statusCode(400)
                 .body("error", equalTo("UNKNOWN_ROLE"));
@@ -448,7 +448,7 @@ class AdminResourceIntegrationTest extends IntegrationTestBase {
                         "roles", List.of()
                 ))
                 .when()
-                .post("/admin/users")
+                .post("/v1/admin/users")
                 .then()
                 .statusCode(400)
                 .body("error", equalTo("PASSWORD_POLICY_VIOLATION"))

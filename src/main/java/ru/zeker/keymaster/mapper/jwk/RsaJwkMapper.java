@@ -1,6 +1,5 @@
 package ru.zeker.keymaster.mapper.jwk;
 
-import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
 import ru.zeker.keymaster.domain.key.KeyHeader;
@@ -17,7 +16,7 @@ public abstract class RsaJwkMapper implements JwkMapper {
         return new RSAKey.Builder((RSAPublicKey) publicKey)
                 .keyID(key.kid())
                 .keyUse(KeyUse.SIGNATURE)
-                .algorithm(JWSAlgorithm.parse(supports().name()))
+                .algorithm(supports().getJwsAlgorithm())
                 .build();
     }
 }

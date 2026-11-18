@@ -27,9 +27,6 @@ public interface KeymasterConfig {
     Bootstrap bootstrap();
 
     @Valid
-    Signing signing();
-
-    @Valid
     Keys keys();
 
     interface Password {
@@ -71,12 +68,10 @@ public interface KeymasterConfig {
 
         interface SigningKey {
             boolean enabled();
-        }
-    }
 
-    interface Signing {
-        @NotNull
-        Algorithm algorithm();
+            @NotNull
+            Algorithm algorithm();
+        }
     }
 
     interface Keys {

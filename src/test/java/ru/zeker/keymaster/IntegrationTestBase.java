@@ -40,7 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public abstract class IntegrationTestBase {
 
     protected static final Duration TIMEOUT = Duration.ofSeconds(20);
-    protected static final String VALID_PASSWORD = "correct-horse-1!";
+    protected static final String VALID_PASSWORD = "P@ssWorD123!123";
     protected static final String USER_ID_HEADER = "X-User-Id";
     protected static final String USER_ROLES_HEADER = "X-User-Roles";
 
@@ -115,7 +115,7 @@ public abstract class IntegrationTestBase {
                 .contentType(ContentType.JSON)
                 .body(body)
                 .when()
-                .post("/admin/users");
+                .post("/v1/admin/users");
 
         if (response.statusCode() == 201) {
             createdPrincipals.add(UUID.fromString(response.jsonPath().getString("id")));
@@ -162,7 +162,7 @@ public abstract class IntegrationTestBase {
                         "description", "Test role"
                 ))
                 .when()
-                .post("/admin/admin/roles");
+                .post("/v1/admin/admin/roles");
 
         if (response.statusCode() == 201) {
             createdRoles.add(name);

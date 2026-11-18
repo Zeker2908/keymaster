@@ -12,6 +12,13 @@ CREATE TABLE signing_key (
     remove_at          timestamptz,
     revoked_at         timestamptz,
     CONSTRAINT signing_key_kid_chk   CHECK (kid ~ '^[A-Za-z0-9_-]{43}$'),
+    CONSTRAINT signing_key_alg_chk CHECK (
+        alg IN (
+            'RS256', 'RS384', 'RS512',
+            'PS256', 'PS384', 'PS512',
+            'ES256', 'ES384', 'ES512'
+        )
+    ),
     CONSTRAINT signing_key_nonce_chk CHECK (octet_length(nonce) = 12),
     CONSTRAINT signing_key_order_chk CHECK (
         publish_at <= activate_at

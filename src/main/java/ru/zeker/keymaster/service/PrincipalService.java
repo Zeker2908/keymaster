@@ -11,6 +11,7 @@ import ru.zeker.keymaster.domain.PasswordViolation;
 import ru.zeker.keymaster.domain.context.Actor;
 import ru.zeker.keymaster.domain.entity.Principal;
 import ru.zeker.keymaster.domain.entity.Role;
+import ru.zeker.keymaster.domain.jwt.Subject;
 import ru.zeker.keymaster.dto.request.NewUserRequest;
 import ru.zeker.keymaster.dto.response.UserResponse;
 import ru.zeker.keymaster.exception.ErrorCode;
@@ -43,6 +44,19 @@ public class PrincipalService {
     private final PrincipalMapper mapper;
     private final PasswordPolicy policy;
     private final PasswordHasher hasher;
+
+    public Uni<Subject> getByLogin(String login) {
+        log.info("Finding user '{}'", login);
+
+        return Panache.withSession(() -> principals.findSubjectByLogin(login)
+                .onItem().invoke(subject -> {
+                    if (subject == null) {
+                        log.warn("User '{}' not found", login);
+                    } else {
+                        log.info("User '{}' found, id={}", login, subject.userId());
+                    }
+                }));
+    }
 
     public Uni<UserResponse> create(Actor actor, NewUserRequest request) {
         log.info("Creating user '{}'", request.login());

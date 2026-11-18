@@ -27,7 +27,7 @@ public abstract class EcJwkMapper implements JwkMapper {
         )
                 .keyID(key.kid())
                 .keyUse(KeyUse.SIGNATURE)
-                .algorithm(JWSAlgorithm.parse(supports().name()))
+                .algorithm(supports().getJwsAlgorithm())
                 .build();
     }
 }

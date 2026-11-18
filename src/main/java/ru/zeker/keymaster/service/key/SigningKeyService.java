@@ -20,6 +20,7 @@ import ru.zeker.keymaster.mapper.SigningKeyMapper;
 import ru.zeker.keymaster.repository.SigningKeyRepository;
 import ru.zeker.keymaster.service.AuditService;
 import ru.zeker.keymaster.util.AuditDetails;
+import ru.zeker.keymaster.util.ExceptionTranslator;
 import ru.zeker.keymaster.util.Secrets;
 
 import java.time.Clock;
@@ -58,10 +59,19 @@ public class SigningKeyService {
         return createKey(actor, timeline, algorithm, false);
     }
 
+    public Uni<SigningKey> findActive() {
+        Instant now = clock.instant();
+
+        return Panache.withSession(() -> signingKeys.findActiveKey(now)
+                .onItem().ifNull().failWith(() -> new KeyMasterException(ErrorCode.SIGNING_UNAVAILABLE))
+                .invoke(key -> log.info("Found active signing key: kid={}", key.getKid()))
+        );
+    }
+
     public Uni<List<KeyHeader>> listPublished() {
         Instant now = clock.instant();
 
-        return Panache.withSession(() -> signingKeys.listPublishedCandidates(now))
+        return Panache.withSession(() -> signingKeys.listPublishedKeys(now))
                 .map(candidates -> {
                     List<KeyHeader> published = candidates.stream()
                             .filter(key -> lifecycle.isPublished(
@@ -91,6 +101,9 @@ public class SigningKeyService {
                 .map(this::encryptKeyPair)
                 .map(pair -> mapper.toEntity(pair, timeline, algorithm))
                 .chain(key -> Panache.withTransaction(() -> persistKey(actor, key)))
+                // 23P01 может всплыть только при коммите: переводим и эту границу,
+                // иначе гонка двух экземпляров уйдёт наверх сырой PersistenceException.
+                .onFailure().transform(ExceptionTranslator::translate)
                 .invoke(() -> log.info("Signing key creation completed successfully"))
                 .onFailure(e -> !(initialKey && isScheduleConflict(e)))
                 .invoke(e -> log.error("Signing key creation failed: {}", e.getMessage()));

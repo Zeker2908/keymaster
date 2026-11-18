@@ -17,7 +17,7 @@ import java.time.Instant;
 @Setter
 @Entity
 @Table(name = "principal_role")
-public class PrincipalRole {
+public class PrincipalRole extends AbstractEntity {
 
     public static final String PRIMARY_KEY = "principal_role_pkey";
 

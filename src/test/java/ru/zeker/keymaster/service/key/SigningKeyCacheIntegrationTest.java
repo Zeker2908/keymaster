@@ -1,5 +1,6 @@
 package ru.zeker.keymaster.service.key;
 
+import io.quarkus.hibernate.reactive.panache.Panache;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.vertx.VertxContextSupport;
 import io.smallrye.mutiny.Uni;
@@ -13,11 +14,14 @@ import ru.zeker.keymaster.SigningKeyTestStore;
 import ru.zeker.keymaster.SigningKeyTestStore.StoredKey;
 import ru.zeker.keymaster.domain.Algorithm;
 import ru.zeker.keymaster.domain.context.Actor;
+import ru.zeker.keymaster.domain.entity.SigningKey;
 import ru.zeker.keymaster.domain.key.EncryptedKey;
 import ru.zeker.keymaster.domain.key.KeyTimeline;
 import ru.zeker.keymaster.domain.key.SigningKeyData;
 import ru.zeker.keymaster.exception.ErrorCode;
+import ru.zeker.keymaster.exception.KeyDecryptionException;
 import ru.zeker.keymaster.exception.KeyMasterException;
+import ru.zeker.keymaster.repository.SigningKeyRepository;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -33,15 +37,15 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * Интеграционные тесты кэша signing-ключей.
+ * Проверки кэша signing-ключей.
  *
- * <p>Проверяется реальное поведение Quarkus Cache поверх PostgreSQL:</p>
+ * <p>Кэш хранит расшифрованные ключи по {@code kid}:</p>
  * <ul>
- *   <li>первое обращение загружает ключ из БД, повторное обслуживается из кэша;</li>
- *   <li>точечная инвалидация удаляет только один ключ;</li>
+ *   <li>повторный запрос того же {@code kid} не расшифровывает ключ заново;</li>
+ *   <li>{@code invalidate} удаляет только запрошенный ключ;</li>
  *   <li>{@code invalidateAll} очищает весь кэш;</li>
- *   <li>неудачный поиск не кэшируется;</li>
- *   <li>закэшированные данные совпадают с расшифрованной записью БД.</li>
+ *   <li>ошибка расшифровки не попадает в кэш;</li>
+ *   <li>значение в кэше совпадает с расшифрованной записью в БД.</li>
  * </ul>
  */
 @QuarkusTest
@@ -54,6 +58,9 @@ class SigningKeyCacheIntegrationTest extends IntegrationTestBase {
 
     @Inject
     SigningKeyService keys;
+
+    @Inject
+    SigningKeyRepository repository;
 
     @Inject
     KeyCipher cipher;
@@ -75,28 +82,31 @@ class SigningKeyCacheIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
-    void servesCachedKeyAfterDatabaseRowIsRemoved() throws Throwable {
+    void cachesDecryptedKeyByKid() throws Throwable {
         String kid = createKey(Algorithm.RS256, "2000-01-01");
+        SigningKey key = load(kid);
 
-        SigningKeyData loaded = run(() -> cache.get(kid));
+        SigningKeyData loaded = run(() -> cache.get(key));
         byte[] privateKey = loaded.privateKey().getEncoded();
 
         assertEquals(kid, loaded.kid());
         assertEquals(Algorithm.RS256, loaded.algorithm());
         assertNotNull(loaded.privateKey());
 
+        // Запись удалена из БД, а повторно переданная сущность содержит
+        // заведомо нерасшифровываемые данные. Кэш должен вернуть первый результат.
         SigningKeyTestStore.delete(pool, kid);
 
-        SigningKeyData cached = run(() -> cache.get(kid));
+        SigningKeyData cached = run(() -> cache.get(corruptedCopy(key)));
 
         assertEquals(kid, cached.kid());
         assertEquals(Algorithm.RS256, cached.algorithm());
         assertArrayEquals(privateKey, cached.privateKey().getEncoded(),
-                "повторное обращение должно вернуть ключ из кэша, а не из БД");
+                "повторный запрос должен вернуть закэшированный ключ, а не расшифровывать новый");
 
         run(() -> cache.invalidate(kid));
 
-        assertKeyNotFound(() -> cache.get(kid));
+        assertDecryptionFails(() -> cache.get(corruptedCopy(key)));
     }
 
     @Test
@@ -104,20 +114,20 @@ class SigningKeyCacheIntegrationTest extends IntegrationTestBase {
         String rsaKid = createKey(Algorithm.RS256, "2000-02-01");
         String ecKid = createKey(Algorithm.ES256, "2000-02-02");
 
-        run(() -> cache.get(rsaKid));
-        run(() -> cache.get(ecKid));
+        SigningKey rsaKey = load(rsaKid);
+        SigningKey ecKey = load(ecKid);
+
+        run(() -> cache.get(rsaKey));
+        run(() -> cache.get(ecKey));
 
         SigningKeyTestStore.delete(pool, rsaKid);
         SigningKeyTestStore.delete(pool, ecKid);
 
-        assertEquals(Algorithm.RS256, run(() -> cache.get(rsaKid)).algorithm());
-        assertEquals(Algorithm.ES256, run(() -> cache.get(ecKid)).algorithm());
-
         run(() -> cache.invalidate(rsaKid));
 
-        assertKeyNotFound(() -> cache.get(rsaKid));
-        assertEquals(Algorithm.ES256, run(() -> cache.get(ecKid)).algorithm(),
-                "инвалидация одного kid не должна очищать остальные ключи");
+        assertDecryptionFails(() -> cache.get(corruptedCopy(rsaKey)));
+        assertEquals(Algorithm.ES256, run(() -> cache.get(corruptedCopy(ecKey))).algorithm(),
+                "инвалидация одного kid не должна затрагивать остальные ключи");
     }
 
     @Test
@@ -125,45 +135,45 @@ class SigningKeyCacheIntegrationTest extends IntegrationTestBase {
         String firstKid = createKey(Algorithm.RS256, "2000-03-01");
         String secondKid = createKey(Algorithm.ES384, "2000-03-02");
 
-        run(() -> cache.get(firstKid));
-        run(() -> cache.get(secondKid));
+        SigningKey firstKey = load(firstKid);
+        SigningKey secondKey = load(secondKid);
+
+        run(() -> cache.get(firstKey));
+        run(() -> cache.get(secondKey));
 
         SigningKeyTestStore.delete(pool, firstKid);
         SigningKeyTestStore.delete(pool, secondKid);
 
-        assertEquals(Algorithm.RS256, run(() -> cache.get(firstKid)).algorithm());
-        assertEquals(Algorithm.ES384, run(() -> cache.get(secondKid)).algorithm());
+        assertEquals(Algorithm.RS256, run(() -> cache.get(corruptedCopy(firstKey))).algorithm());
+        assertEquals(Algorithm.ES384, run(() -> cache.get(corruptedCopy(secondKey))).algorithm());
 
         run(() -> cache.invalidateAll());
 
-        assertKeyNotFound(() -> cache.get(firstKid));
-        assertKeyNotFound(() -> cache.get(secondKid));
+        assertDecryptionFails(() -> cache.get(corruptedCopy(firstKey)));
+        assertDecryptionFails(() -> cache.get(corruptedCopy(secondKey)));
     }
 
     @Test
     void doesNotCacheFailedLookups() throws Throwable {
         String kid = createKey(Algorithm.RS256, "2000-04-01");
-        StoredKey stored = SigningKeyTestStore.load(pool, kid);
+        SigningKey key = load(kid);
 
-        SigningKeyTestStore.delete(pool, kid);
+        assertDecryptionFails(() -> cache.get(corruptedCopy(key)));
 
-        assertKeyNotFound(() -> cache.get(kid));
-
-        SigningKeyTestStore.insert(pool, stored);
-
-        SigningKeyData loaded = run(() -> cache.get(kid));
+        SigningKeyData loaded = run(() -> cache.get(key));
 
         assertEquals(kid, loaded.kid());
         assertEquals(Algorithm.RS256, loaded.algorithm(),
-                "после появления строки в БД ключ должен загрузиться без ручной инвалидации");
+                "после неудачной расшифровки кэш должен попытаться загрузить ключ снова");
     }
 
     @Test
     void cachedValueMatchesEncryptedDatabaseRecord() throws Throwable {
         String kid = createKey(Algorithm.ES384, "2000-05-01");
         StoredKey stored = SigningKeyTestStore.load(pool, kid);
+        SigningKey key = load(kid);
 
-        SigningKeyData cached = run(() -> cache.get(kid));
+        SigningKeyData cached = run(() -> cache.get(key));
 
         byte[] decrypted = cipher.decrypt(new EncryptedKey(
                 stored.privateKeyEnc(),
@@ -173,7 +183,7 @@ class SigningKeyCacheIntegrationTest extends IntegrationTestBase {
         assertEquals(Algorithm.ES384.name(), stored.alg());
         assertEquals(Algorithm.ES384, cached.algorithm());
         assertArrayEquals(decrypted, cached.privateKey().getEncoded(),
-                "кэш должен хранить расшифрованный приватный ключ, совпадающий с БД");
+                "кэш должен хранить расшифрованное значение из БД");
         assertEquals(1, (int) stored.masterKeyVersion());
         assertEquals(12, stored.nonce().length);
     }
@@ -207,12 +217,34 @@ class SigningKeyCacheIntegrationTest extends IntegrationTestBase {
         return kid;
     }
 
-    private void assertKeyNotFound(Supplier<Uni<SigningKeyData>> lookup) {
+    private SigningKey load(String kid) throws Throwable {
+        SigningKey key = run(() -> Panache.withSession(() -> repository.findByKid(kid)));
+
+        assertNotNull(key, () -> "signing key not found in database: " + kid);
+        return key;
+    }
+
+    /**
+     * Копия сущности с тем же {@code kid}, но с данными, которые невозможно расшифровать.
+     */
+    private static SigningKey corruptedCopy(SigningKey key) {
+        return SigningKey.builder()
+                .kid(key.getKid())
+                .alg(key.getAlg())
+                .publicKey(key.getPublicKey())
+                .privateKeyEnc(new byte[]{0x00, 0x01, 0x02, 0x03})
+                .nonce(new byte[12])
+                .masterKeyVersion((short) 1)
+                .timeline(key.getTimeline())
+                .build();
+    }
+
+    private void assertDecryptionFails(Supplier<Uni<SigningKeyData>> lookup) {
         Throwable failure = assertThrows(Throwable.class, () -> run(lookup));
 
-        KeyMasterException domain = findCause(failure, KeyMasterException.class);
-        assertNotNull(domain, () -> "ожидалась доменная ошибка, получено: " + failure);
-        assertEquals(ErrorCode.KEY_NOT_FOUND, domain.getCode());
+        KeyMasterException domain = findCause(failure, KeyDecryptionException.class);
+        assertNotNull(domain, () -> "ожидалась ошибка расшифровки, получено: " + failure);
+        assertEquals(ErrorCode.KEY_DECRYPTION_FAILED, domain.getCode());
     }
 
     private static <T> T run(Supplier<Uni<T>> supplier) throws Throwable {

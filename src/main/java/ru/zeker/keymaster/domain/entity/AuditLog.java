@@ -26,7 +26,7 @@ import java.util.UUID;
 @Table(name = "audit_log")
 @NoArgsConstructor
 @AllArgsConstructor
-public class AuditLog {
+public class AuditLog extends AbstractEntity {
 
     @Id
     @Column(nullable = false, updatable = false)

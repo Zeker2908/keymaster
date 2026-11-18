@@ -143,7 +143,7 @@ class JwksResourceIntegrationTest extends IntegrationTestBase {
 
         Response response = given()
                 .when()
-                .get("/jwks");
+                .get("/v1/jwks");
 
         assertEquals(200, response.statusCode(), response.asString());
         assertTrue(response.contentType().startsWith("application/json"), response.contentType());
@@ -222,14 +222,14 @@ class JwksResourceIntegrationTest extends IntegrationTestBase {
 
         given()
                 .when()
-                .get("/jwks")
+                .get("/v1/jwks")
                 .then()
                 .statusCode(503)
                 .contentType(containsString("application/json"))
                 .body("status", equalTo(503))
                 .body("error", equalTo("JWK_UNAVAILABLE"))
                 .body("message", equalTo("No published signing keys"))
-                .body("path", equalTo("/jwks"))
+                .body("path", equalTo("/api/keymaster/v1/jwks"))
                 .body("requestId", notNullValue());
     }
 
@@ -250,7 +250,7 @@ class JwksResourceIntegrationTest extends IntegrationTestBase {
 
         given()
                 .when()
-                .get("/jwks")
+                .get("/v1/jwks")
                 .then()
                 .statusCode(503)
                 .body("status", equalTo(503))

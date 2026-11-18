@@ -18,7 +18,7 @@ import java.util.UUID;
 @Getter
 @Setter
 @MappedSuperclass
-public abstract class BaseEntity extends PanacheEntityBase {
+public abstract class BaseEntity extends AbstractEntity {
 
     @Id
     @GeneratedValue
@@ -31,22 +31,7 @@ public abstract class BaseEntity extends PanacheEntityBase {
     private Instant createdAt;
 
     @Override
-    public final boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null) return false;
-        Class<?> oClass = o instanceof HibernateProxy p
-                ? p.getHibernateLazyInitializer().getPersistentClass() : o.getClass();
-        Class<?> thisClass = this instanceof HibernateProxy p
-                ? p.getHibernateLazyInitializer().getPersistentClass() : this.getClass();
-        if (thisClass != oClass) return false;
-        BaseEntity that = (BaseEntity) o;
-        return getId() != null && Objects.equals(getId(), that.getId());
-    }
-
-    @Override
-    public final int hashCode() {
-        return this instanceof HibernateProxy p
-                ? p.getHibernateLazyInitializer().getPersistentClass().hashCode()
-                : getClass().hashCode();
+    public UUID getId() {
+        return id;
     }
 }

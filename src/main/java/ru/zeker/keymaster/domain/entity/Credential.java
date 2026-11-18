@@ -18,7 +18,7 @@ import java.util.UUID;
 @Setter
 @Entity
 @Table(name = "credential")
-public class Credential {
+public class Credential extends AbstractEntity {
 
     @Id
     @Column(nullable = false, updatable = false)
@@ -35,4 +35,9 @@ public class Credential {
     @UpdateTimestamp
     @Column(name = "changed_at", nullable = false)
     private Instant changedAt;
+
+    @Override
+    protected Object getId() {
+        return principalId;
+    }
 }
