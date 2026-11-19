@@ -11,7 +11,7 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import ru.zeker.keymaster.IntegrationTestBase;
-import ru.zeker.keymaster.config.KeymasterConfig;
+import ru.zeker.keymaster.config.KeysConfig;
 import ru.zeker.keymaster.domain.Algorithm;
 import ru.zeker.keymaster.domain.context.Actor;
 import ru.zeker.keymaster.domain.entity.SigningKey;
@@ -71,7 +71,7 @@ class SigningKeyAcceptanceTest extends IntegrationTestBase {
     KeyCipher cipher;
 
     @Inject
-    KeymasterConfig config;
+    KeysConfig config;
 
     private final List<String> createdKids = new ArrayList<>();
 
@@ -269,7 +269,7 @@ class SigningKeyAcceptanceTest extends IntegrationTestBase {
     void privateKeyAndMasterKeyDoNotLeakIntoToStringOrLogs() throws Throwable {
         ensureInitialKey();
 
-        String masterKey = config.keys().masterKey();
+        String masterKey = config.masterKey();
         Row row = firstKeyRow();
         String kid = row.getString("kid");
         byte[] privateKeyBytes = cipher.decrypt(new EncryptedKey(

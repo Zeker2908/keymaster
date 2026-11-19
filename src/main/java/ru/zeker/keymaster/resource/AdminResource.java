@@ -21,7 +21,7 @@ import ru.zeker.keymaster.domain.context.RequestContext;
 import ru.zeker.keymaster.dto.request.NewRoleRequest;
 import ru.zeker.keymaster.dto.request.NewUserRequest;
 import ru.zeker.keymaster.dto.response.UserResponse;
-import ru.zeker.keymaster.resource.filter.RequireAdmin;
+import ru.zeker.keymaster.annotation.RequireAdmin;
 import ru.zeker.keymaster.service.PrincipalService;
 import ru.zeker.keymaster.service.RoleService;
 

@@ -4,7 +4,7 @@ import de.mkammerer.argon2.Argon2;
 import io.smallrye.mutiny.helpers.test.UniAssertSubscriber;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import ru.zeker.keymaster.config.KeymasterConfig;
+import ru.zeker.keymaster.config.PasswordConfig;
 import ru.zeker.keymaster.exception.ServiceOverloadedException;
 
 import java.nio.charset.StandardCharsets;
@@ -40,19 +40,19 @@ class PasswordHasherTest {
     private static final int CONCURRENCY_LIMIT = 4;
 
     private Argon2 argon2;
-    private KeymasterConfig config;
+    private PasswordConfig config;
     private ExecutorService executor;
     private PasswordHasher hasher;
 
     @BeforeEach
     void setUp() {
         argon2 = mock(Argon2.class);
-        config = mock(KeymasterConfig.class, RETURNS_DEEP_STUBS);
+        config = mock(PasswordConfig.class, RETURNS_DEEP_STUBS);
         executor = new DirectExecutorService();
 
-        when(config.password().argon2().iterations()).thenReturn(2);
-        when(config.password().argon2().memory()).thenReturn(19456);
-        when(config.password().argon2().parallelism()).thenReturn(1);
+        when(config.argon2().iterations()).thenReturn(2);
+        when(config.argon2().memory()).thenReturn(19456);
+        when(config.argon2().parallelism()).thenReturn(1);
 
         hasher = new PasswordHasher(argon2, config, executor);
     }

@@ -7,7 +7,7 @@ import io.vertx.core.Vertx;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Named;
 import lombok.extern.slf4j.Slf4j;
-import ru.zeker.keymaster.config.KeymasterConfig;
+import ru.zeker.keymaster.config.PasswordConfig;
 import ru.zeker.keymaster.exception.ServiceOverloadedException;
 import ru.zeker.keymaster.util.Secrets;
 
@@ -21,14 +21,14 @@ import java.util.function.Supplier;
 public final class PasswordHasher {
 
     private final Argon2 argon2;
-    private final KeymasterConfig.Password.Argon2 config;
+    private final PasswordConfig.Argon2 config;
     private final ExecutorService executor;
 
     public PasswordHasher(Argon2 argon2,
-                          KeymasterConfig config,
+                          PasswordConfig config,
                           @Named("password-hashing") ExecutorService executor) {
         this.argon2 = argon2;
-        this.config = config.password().argon2();
+        this.config = config.argon2();
         this.executor = executor;
     }
 

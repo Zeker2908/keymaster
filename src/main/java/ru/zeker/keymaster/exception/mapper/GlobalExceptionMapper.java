@@ -11,10 +11,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.jboss.resteasy.reactive.server.ServerExceptionMapper;
 import ru.zeker.keymaster.exception.ErrorResponseFactory;
 import ru.zeker.keymaster.exception.KeyMasterException;
-import ru.zeker.keymaster.exception.ServiceOverloadedException;
 import ru.zeker.keymaster.exception.dto.ErrorDetail;
 import ru.zeker.keymaster.exception.dto.ErrorResponse;
 
+import java.time.Duration;
 import java.util.List;
 
 @Slf4j
@@ -23,38 +23,28 @@ import java.util.List;
 public class GlobalExceptionMapper {
 
     private static final String RETRY_AFTER = "Retry-After";
-    private static final String RETRY_AFTER_SECONDS = "2";
 
     private final ErrorResponseFactory errorResponseFactory;
-
-    @ServerExceptionMapper
-    public Response handleServiceOverloaded(ServiceOverloadedException exception, UriInfo uriInfo) {
-        log.warn("Overloaded exception for request: {} - {}", path(uriInfo), exception.getMessage());
-
-        return Response.status(exception.getCode().getStatus())
-                .type(MediaType.APPLICATION_JSON_TYPE)
-                .header(RETRY_AFTER, RETRY_AFTER_SECONDS)
-                .entity(errorResponseFactory.createBody(
-                        exception.getCode().getStatus(),
-                        exception.getCode().name(),
-                        exception.getMessage(),
-                        exception.getDetails(),
-                        uriInfo
-                ))
-                .build();
-    }
 
     @ServerExceptionMapper
     public Response handleKeyMaster(KeyMasterException exception, UriInfo uriInfo) {
         log.warn("Keymaster exception for request: {} - {}", path(uriInfo), exception.getMessage());
 
-        return errorResponseFactory.create(
+        Response response = errorResponseFactory.create(
                 exception.getCode().getStatus(),
                 exception.getCode().name(),
                 exception.getMessage(),
                 exception.getDetails(),
                 uriInfo
         );
+
+        if (exception.getRetryAfter() == null) {
+            return response;
+        }
+
+        return Response.fromResponse(response)
+                .header(RETRY_AFTER, retryAfterSeconds(exception.getRetryAfter()))
+                .build();
     }
 
     @ServerExceptionMapper
@@ -114,5 +104,10 @@ public class GlobalExceptionMapper {
 
     private String path(UriInfo uriInfo) {
         return uriInfo.getRequestUri().getRawPath();
+    }
+
+    private static String retryAfterSeconds(Duration retryAfter) {
+        long seconds = Math.max(1, (retryAfter.toMillis() + 999) / 1000);
+        return Long.toString(seconds);
     }
 }

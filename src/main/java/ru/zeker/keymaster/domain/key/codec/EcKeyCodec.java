@@ -1,11 +1,13 @@
 
 package ru.zeker.keymaster.domain.key.codec;
 
+import ru.zeker.keymaster.domain.Consts;
+import ru.zeker.keymaster.util.Secrets;
+
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
-import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.interfaces.ECPrivateKey;
@@ -75,13 +77,9 @@ public final class EcKeyCodec {
                 jwkY(publicKey)
         );
 
-        try {
-            MessageDigest digest = MessageDigest.getInstance(Codecs.SHA_256);
-
-            return Codecs.BASE64_URL_ENCODER.encodeToString(digest.digest(json.getBytes(StandardCharsets.UTF_8)));
-        } catch (GeneralSecurityException e) {
-            throw new IllegalStateException("SHA-256 is not available", e);
-        }
+        return Consts.BASE64_URL_ENCODER.encodeToString(
+                Secrets.sha256(json.getBytes(StandardCharsets.UTF_8))
+        );
     }
 
     private static int coordinateSize(ECPublicKey publicKey) {
@@ -103,6 +101,6 @@ public final class EcKeyCodec {
             bytes = padded;
         }
 
-        return Codecs.BASE64_URL_ENCODER.encodeToString(bytes);
+        return Consts.BASE64_URL_ENCODER.encodeToString(bytes);
     }
 }

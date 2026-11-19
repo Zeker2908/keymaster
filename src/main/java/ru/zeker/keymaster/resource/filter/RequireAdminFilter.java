@@ -6,6 +6,7 @@ import jakarta.ws.rs.ext.Provider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import ru.zeker.keymaster.annotation.RequireAdmin;
 import ru.zeker.keymaster.exception.ErrorCode;
 import ru.zeker.keymaster.exception.KeyMasterException;
 

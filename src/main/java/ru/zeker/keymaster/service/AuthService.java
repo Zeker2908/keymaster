@@ -7,6 +7,7 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import lombok.extern.slf4j.Slf4j;
+import ru.zeker.keymaster.domain.context.RequestContext;
 import ru.zeker.keymaster.domain.jwt.Subject;
 import ru.zeker.keymaster.dto.request.LoginRequest;
 import ru.zeker.keymaster.dto.response.TokenResponse;
@@ -15,6 +16,7 @@ import ru.zeker.keymaster.exception.KeyMasterException;
 import ru.zeker.keymaster.service.jwt.AccessTokenFactory;
 import ru.zeker.keymaster.service.key.ActiveKeyResolver;
 import ru.zeker.keymaster.service.password.PasswordHasher;
+import ru.zeker.keymaster.service.throttle.LoginThrottle;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -28,6 +30,8 @@ public class AuthService {
     private final AccessTokenFactory tokenFactory;
     private final PrincipalService principals;
     private final PasswordHasher hasher;
+    private final LoginThrottle throttle;
+    private final RequestContext requestContext;
     private final Clock clock;
 
     private String dummyHash;
@@ -37,11 +41,15 @@ public class AuthService {
             AccessTokenFactory tokenFactory,
             PrincipalService principals,
             PasswordHasher hasher,
+            LoginThrottle throttle,
+            RequestContext requestContext,
             Clock clock) {
         this.resolver = resolver;
         this.tokenFactory = tokenFactory;
         this.principals = principals;
         this.hasher = hasher;
+        this.throttle = throttle;
+        this.requestContext = requestContext;
         this.clock = clock;
     }
 
@@ -53,16 +61,21 @@ public class AuthService {
         );
     }
 
-    /**
-     * Аутентификация по логину и паролю.
-     *
-     * <p>Пользователи с {@code kind != USER} и {@code status != ACTIVE} не попадают
-     * в выборку и проходят тот же путь, что и несуществующий логин: проверка пароля
-     * по фиктивному хэшу. Это выравнивает время ответа и не даёт отличить
-     * отключённую учётную запись или клиента от неверного пароля.</p>
-     *
-     */
     public Uni<TokenResponse> login(LoginRequest request) {
+        LoginThrottle.Ticket ticket;
+
+        try {
+            ticket = throttle.acquire(requestContext.getClientIp(), request.login());
+        } catch (RuntimeException e) {
+            return Uni.createFrom().failure(e);
+        }
+
+        return doLogin(request)
+                .onItem().invoke(ticket::success)
+                .onFailure(failure -> !isInvalidCredentials(failure)).invoke(ticket::refund);
+    }
+
+    private Uni<TokenResponse> doLogin(LoginRequest request) {
         return principals.getByLogin(request.login())
                 .chain(subject -> {
                     String hash = subject != null ? subject.secretHash() : dummyHash;
@@ -79,6 +92,11 @@ public class AuthService {
                                 return issueTokens(subject);
                             });
                 });
+    }
+
+    private static boolean isInvalidCredentials(Throwable failure) {
+        return failure instanceof KeyMasterException exception
+                && exception.getCode() == ErrorCode.INVALID_CREDENTIALS;
     }
 
     private Uni<TokenResponse> issueTokens(Subject subject) {

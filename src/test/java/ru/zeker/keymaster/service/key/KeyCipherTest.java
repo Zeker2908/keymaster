@@ -1,7 +1,7 @@
 package ru.zeker.keymaster.service.key;
 
 import org.junit.jupiter.api.Test;
-import ru.zeker.keymaster.config.KeymasterConfig;
+import ru.zeker.keymaster.config.KeysConfig;
 import ru.zeker.keymaster.domain.key.EncryptedKey;
 import ru.zeker.keymaster.domain.key.GeneratedKey;
 import ru.zeker.keymaster.exception.KeyDecryptionException;
@@ -170,8 +170,8 @@ class KeyCipherTest {
     }
 
     private static KeyCipher cipher(String masterKey) {
-        KeymasterConfig config = mock(KeymasterConfig.class, RETURNS_DEEP_STUBS);
-        when(config.keys().masterKey()).thenReturn(masterKey);
+        KeysConfig config = mock(KeysConfig.class, RETURNS_DEEP_STUBS);
+        when(config.masterKey()).thenReturn(masterKey);
         return new KeyCipher(config);
     }
 

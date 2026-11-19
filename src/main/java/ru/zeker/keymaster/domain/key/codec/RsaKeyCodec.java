@@ -1,10 +1,12 @@
 package ru.zeker.keymaster.domain.key.codec;
 
+import ru.zeker.keymaster.domain.Consts;
+import ru.zeker.keymaster.util.Secrets;
+
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
-import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.interfaces.RSAPrivateKey;
@@ -61,13 +63,9 @@ public final class RsaKeyCodec {
     public static String thumbprint(RSAPublicKey publicKey) {
         String json = E_S_KTY_RSA_N_S.formatted(jwkE(publicKey), jwkN(publicKey));
 
-        try {
-            MessageDigest digest = MessageDigest.getInstance(Codecs.SHA_256);
-
-            return Codecs.BASE64_URL_ENCODER.encodeToString(digest.digest(json.getBytes(StandardCharsets.UTF_8)));
-        } catch (GeneralSecurityException e) {
-            throw new IllegalStateException("SHA-256 is not available", e);
-        }
+        return Consts.BASE64_URL_ENCODER.encodeToString(
+                Secrets.sha256(json.getBytes(StandardCharsets.UTF_8))
+        );
     }
 
     private static String encodeUnsigned(BigInteger value) {
@@ -77,6 +75,6 @@ public final class RsaKeyCodec {
             bytes = Arrays.copyOfRange(bytes, 1, bytes.length);
         }
 
-        return Codecs.BASE64_URL_ENCODER.encodeToString(bytes);
+        return Consts.BASE64_URL_ENCODER.encodeToString(bytes);
     }
 }

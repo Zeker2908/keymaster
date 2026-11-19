@@ -22,7 +22,8 @@ public enum ErrorCode {
     KEY_SCHEDULE_CONFLICT(409, "Signing key schedule conflicts with an existing key"),
     JWK_UNAVAILABLE(503, "JWKS is temporarily unavailable"),
     KEY_NOT_FOUND(404, "Signing key not found"),
-    SIGNING_UNAVAILABLE(503, "Signing key unavailable");
+    SIGNING_UNAVAILABLE(503, "Signing key unavailable"),
+    TOO_MANY_REQUESTS(429, "Too many requests, try later");
 
     private final int status;
     private final String defaultMessage;

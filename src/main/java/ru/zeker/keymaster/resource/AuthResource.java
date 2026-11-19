@@ -7,10 +7,11 @@ import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import lombok.RequiredArgsConstructor;
 import ru.zeker.keymaster.dto.request.LoginRequest;
-import ru.zeker.keymaster.dto.response.TokenResponse;
 import ru.zeker.keymaster.service.AuthService;
 
 @Path("/v1/auth")
@@ -24,7 +25,10 @@ public class AuthResource {
 
     @POST
     @Path("/login")
-    public Uni<TokenResponse> login(@Valid LoginRequest request) {
-        return authService.login(request);
+    public Uni<Response> login(@Valid LoginRequest request) {
+        return authService.login(request)
+                .map(tokenResponse -> Response.ok(tokenResponse)
+                        .header(HttpHeaders.CACHE_CONTROL, "no-cache")
+                        .build());
     }
 }

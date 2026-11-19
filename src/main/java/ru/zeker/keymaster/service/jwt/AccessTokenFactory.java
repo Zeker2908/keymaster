@@ -7,7 +7,8 @@ import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import jakarta.enterprise.context.ApplicationScoped;
-import ru.zeker.keymaster.config.KeymasterConfig;
+import ru.zeker.keymaster.config.JwtConfig;
+import ru.zeker.keymaster.config.KeysConfig;
 import ru.zeker.keymaster.domain.jwt.Subject;
 import ru.zeker.keymaster.domain.key.SigningKeyData;
 import ru.zeker.keymaster.exception.ErrorCode;
@@ -27,10 +28,10 @@ public class AccessTokenFactory {
     private final String issuer;
     private final Duration ttl;
 
-    public AccessTokenFactory(KeymasterConfig config) {
-        this.audience = config.audience();
-        this.issuer = config.issuer();
-        this.ttl = config.keys().maxAccessTtl();
+    public AccessTokenFactory(JwtConfig jwt, KeysConfig keys) {
+        this.audience = jwt.audience();
+        this.issuer = jwt.issuer();
+        this.ttl = keys.maxAccessTtl();
     }
 
     public Duration ttl() {

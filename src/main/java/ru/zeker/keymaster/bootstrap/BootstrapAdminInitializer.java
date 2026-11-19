@@ -7,7 +7,7 @@ import jakarta.enterprise.event.Observes;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
-import ru.zeker.keymaster.config.KeymasterConfig;
+import ru.zeker.keymaster.config.BootstrapConfig;
 import ru.zeker.keymaster.service.BootstrapAdminService;
 
 import java.time.Duration;
@@ -16,11 +16,11 @@ import java.time.Duration;
 @ApplicationScoped
 public class BootstrapAdminInitializer {
 
-    private final KeymasterConfig.Bootstrap.Admin config;
+    private final BootstrapConfig.Admin config;
     private final BootstrapAdminService admins;
 
-    public BootstrapAdminInitializer(KeymasterConfig config, BootstrapAdminService admins) {
-        this.config = config.bootstrap().admin();
+    public BootstrapAdminInitializer(BootstrapConfig config, BootstrapAdminService admins) {
+        this.config = config.admin();
         this.admins = admins;
     }
 

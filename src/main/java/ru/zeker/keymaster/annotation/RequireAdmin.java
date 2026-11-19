@@ -1,4 +1,4 @@
-package ru.zeker.keymaster.resource.filter;
+package ru.zeker.keymaster.annotation;
 
 import jakarta.ws.rs.NameBinding;
 

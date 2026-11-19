@@ -1,7 +1,7 @@
 package ru.zeker.keymaster.service.key;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import ru.zeker.keymaster.config.KeymasterConfig;
+import ru.zeker.keymaster.config.KeysConfig;
 import ru.zeker.keymaster.domain.key.EncryptedKey;
 import ru.zeker.keymaster.exception.KeyDecryptionException;
 
@@ -29,10 +29,10 @@ public final class KeyCipher {
     private final byte[] masterKey;
     private final SecureRandom secureRandom = new SecureRandom();
 
-    public KeyCipher(KeymasterConfig config) {
+    public KeyCipher(KeysConfig config) {
 
         try {
-            this.masterKey = Base64.getDecoder().decode(config.keys().masterKey());
+            this.masterKey = Base64.getDecoder().decode(config.masterKey());
         } catch (IllegalArgumentException e) {
             throw new IllegalStateException("Master key must be valid Base64");
         }

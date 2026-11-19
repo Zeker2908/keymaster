@@ -8,18 +8,17 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @QuarkusTest
-class KeymasterConfigTest {
+class KeysConfigTest {
 
     @Inject
-    KeymasterConfig config;
+    KeysConfig config;
 
     @Test
     void toStringDoesNotExposeMasterKey() {
-        String masterKey = config.keys().masterKey();
+        String masterKey = config.masterKey();
         assertNotNull(masterKey);
 
         assertDoesNotContainSecrets(config.toString(), masterKey);
-        assertDoesNotContainSecrets(config.keys().toString(), masterKey);
     }
 
     private static void assertDoesNotContainSecrets(String text, String... secrets) {

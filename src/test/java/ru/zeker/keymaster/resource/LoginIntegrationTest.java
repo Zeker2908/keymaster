@@ -14,7 +14,7 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import ru.zeker.keymaster.IntegrationTestBase;
-import ru.zeker.keymaster.config.KeymasterConfig;
+import ru.zeker.keymaster.config.KeysConfig;
 import ru.zeker.keymaster.domain.Algorithm;
 import ru.zeker.keymaster.service.key.SigningKeyService;
 
@@ -47,7 +47,7 @@ class LoginIntegrationTest extends IntegrationTestBase {
     SigningKeyService signingKeys;
 
     @Inject
-    KeymasterConfig config;
+    KeysConfig config;
 
     @BeforeEach
     void ensureActiveSigningKey() throws Throwable {
@@ -73,7 +73,7 @@ class LoginIntegrationTest extends IntegrationTestBase {
                 .statusCode(200)
                 .body("accessToken", not(emptyOrNullString()))
                 .body("tokenType", equalTo("Bearer"))
-                .body("expiresIn", equalTo((int) config.keys().maxAccessTtl().toSeconds()))
+                .body("expiresIn", equalTo((int) config.maxAccessTtl().toSeconds()))
                 .body("refreshToken", nullValue());
 
         assertEquals(
@@ -105,7 +105,7 @@ class LoginIntegrationTest extends IntegrationTestBase {
                 claims.getExpirationTime().toInstant()
         ).toSeconds();
 
-        assertEquals(config.keys().maxAccessTtl().toSeconds(), lifetime);
+        assertEquals(config.maxAccessTtl().toSeconds(), lifetime);
     }
 
     @Test

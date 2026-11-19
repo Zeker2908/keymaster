@@ -33,16 +33,15 @@ public class ApplicationConfig {
 
     @Produces
     @Singleton
-    KeyLifecycle keyLifecycle(KeymasterConfig config) {
-        var conf = config.keys();
-        return new KeyLifecycle(conf.jwksPollInterval(), conf.leeway(), conf.maxAccessTtl());
+    KeyLifecycle keyLifecycle(KeysConfig config) {
+        return new KeyLifecycle(config.jwksPollInterval(), config.leeway(), config.maxAccessTtl());
     }
 
     @Produces
     @Singleton
     @Named("password-hashing")
-    ExecutorService passwordHashingExecutor(KeymasterConfig config) {
-        var conf = config.password().argon2();
+    ExecutorService passwordHashingExecutor(PasswordConfig config) {
+        var conf = config.argon2();
         ThreadFactory threadFactory = Thread.ofPlatform()
                 .name("password-hashing-", 1)
                 .factory();

@@ -4,7 +4,7 @@ import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import ru.zeker.keymaster.config.KeymasterConfig;
+import ru.zeker.keymaster.config.KeysConfig;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -64,7 +64,7 @@ class GatewayKeyRotationSimulationTest {
     KeyLifecycle lifecycle;
 
     @Inject
-    KeymasterConfig config;
+    KeysConfig config;
 
     private Duration pollInterval;
     private Duration leeway;
@@ -75,9 +75,9 @@ class GatewayKeyRotationSimulationTest {
 
     @BeforeEach
     void setUp() {
-        pollInterval = config.keys().jwksPollInterval();
-        leeway = config.keys().leeway();
-        maxAccessTtl = config.keys().maxAccessTtl();
+        pollInterval = config.jwksPollInterval();
+        leeway = config.leeway();
+        maxAccessTtl = config.maxAccessTtl();
 
         Instant activateA = START.minus(A_WAS_ACTIVE_FOR);
         Instant publishA = activateA.minus(lifecycle.publishLead());

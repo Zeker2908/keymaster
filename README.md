@@ -120,6 +120,8 @@ export JWT_ISSUER_MASTER=http://keymaster JWT_AUDIENCE=gatekeeper
 | `BOOTSTRAP_SIGNING_KEY_ENABLED` | Создание начального signing-ключа при старте (`keymaster.bootstrap.signing-key.enabled`, по умолчанию `true`); ключ создаётся только если в БД нет ни одного ключа |
 | `BOOTSTRAP_SIGNING_KEY_ALGORITHM` | Алгоритм создаваемого при бутстрапе signing-ключа (`keymaster.bootstrap.signing-key.algorithm`, по умолчанию `RS256`). Поддерживаются RS256, RS384, RS512, PS256, PS384, PS512, ES256, ES384, ES512 |
 | `KEYMASTER_MASTER_KEY` | Мастер-ключ шифрования приватных ключей, 32 байта в base64 (с этапа 3) |
+| `KEYMASTER_AUTH_LOGIN_IP_LIMIT_ENABLED` | IP-лимиты входа (`keymaster.auth.login.ip-limit.enabled`, по умолчанию `true`); отключать для нагрузочных тестов с одного IP |
+| `KEYMASTER_AUTH_LOGIN_*_LIMIT_MAX_ATTEMPTS`, `KEYMASTER_AUTH_LOGIN_*_LIMIT_WINDOW` | Пороги троттлинга входа (`keymaster.auth.login.*-limit.*`): IP 30/1 мин, логин 50/15 мин, пара IP+логин 5/5 мин |
 
 Значений по умолчанию для секретов в `%prod` нет: без них сервис не стартует.
 
