@@ -28,7 +28,11 @@ public class GlobalExceptionMapper {
 
     @ServerExceptionMapper
     public Response handleKeyMaster(KeyMasterException exception, UriInfo uriInfo) {
-        log.warn("Keymaster exception for request: {} - {}", path(uriInfo), exception.getMessage());
+        if (exception.getCode().getStatus() >= 500) {
+            log.warn("Keymaster exception for request: {} - {}", path(uriInfo), exception.getMessage());
+        } else {
+            log.debug("Keymaster exception for request: {} - {}", path(uriInfo), exception.getMessage());
+        }
 
         Response response = errorResponseFactory.create(
                 exception.getCode().getStatus(),

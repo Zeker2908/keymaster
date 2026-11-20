@@ -17,6 +17,7 @@ public record NewUserRequest(
         String login,
 
         @NotEmpty
+        @Size(max = 128)
         char[] password,
 
         List<@NotBlank @Pattern(regexp = Patterns.ROLE_NAME) String> roles

@@ -7,6 +7,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -48,6 +49,7 @@ public class SigningKey extends AbstractEntity {
     private byte[] privateKeyEnc;
 
     @ToString.Exclude
+    @Size(min = 12, max = 12)
     @Getter(AccessLevel.NONE)
     @Column(nullable = false)
     private byte[] nonce;

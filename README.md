@@ -36,14 +36,14 @@ Identity & Access Service: небольшой сервис аутентифик�
 
 ## Стек
 
-| Компонент | Выбор |
-|---|---|
-| Платформа | Quarkus 3.40 LTS, Java 25, Maven |
-| Модель | Реактивная: Quarkus REST, Hibernate Reactive Panache, reactive-pg-client |
-| БД | PostgreSQL, схема `keymaster`, миграции Flyway (через JDBC, маленький пул только для миграций) |
-| Хэширование паролей | Argon2id (`argon2-jvm`) на ограниченном worker-пуле |
-| Подпись токенов | RS256, RS384, RS512, PS256, PS384, PS512, ES256, ES384, ES512|
-| Тесты | JUnit 5, `@QuarkusTest`, Dev Services (Testcontainers), REST Assured |
+| Компонент           | Выбор                                                                                          |
+|---------------------|------------------------------------------------------------------------------------------------|
+| Платформа           | Quarkus 3.40 LTS, Java 25, Maven                                                               |
+| Модель              | Реактивная: Quarkus REST, Hibernate Reactive Panache, reactive-pg-client                       |
+| БД                  | PostgreSQL, схема `keymaster`, миграции Flyway (через JDBC, маленький пул только для миграций) |
+| Хэширование паролей | Argon2id (`argon2-jvm`) на ограниченном worker-пуле                                            |
+| Подпись токенов     | RS256, RS384, RS512, PS256, PS384, PS512, ES256, ES384, ES512                                  |
+| Тесты               | JUnit 5, `@QuarkusTest`, Dev Services (Testcontainers), REST Assured                           |
 
 ## Контракт с gatekeeper
 
@@ -58,38 +58,49 @@ Identity & Access Service: небольшой сервис аутентифик�
 
 Статус реализации по этапам плана.
 
-| Метод и путь | Назначение | Этап | Статус |
-|---|---|---|---|
-| `POST /admin/users` | Создать пользователя | 2 | готово |
-| `GET /admin/users/{id}` | Получить пользователя | 2 | готово |
-| `PUT /admin/users/{id}/roles/{role}` | Назначить роль (идемпотентно) | 2 | готово |
-| `DELETE /admin/users/{id}/roles/{role}` | Снять роль (защита последнего админа) | 2 | готово |
-| `POST /admin/roles` | Создать роль | 2 | готово |
-| `GET /jwks` | Публичные ключи для гейтвея | 4 | план |
-| `POST /auth/login` | Логин, выдача токенов | 5 | план |
-| `POST /auth/refresh`, `POST /auth/logout` | Refresh и выход | 6 | план |
-| `/admin/rules`, `GET /rules` | Управление правилами и выдача гейтвею | 7 | план |
-| `POST /auth/token` | Client credentials для API-клиентов | 8 | план |
+| Метод и путь                              | Назначение                            | Этап | Статус |
+|-------------------------------------------|---------------------------------------|------|--------|
+| `POST /admin/users`                       | Создать пользователя                  | 2    | готово |
+| `GET /admin/users/{id}`                   | Получить пользователя                 | 2    | готово |
+| `PUT /admin/users/{id}/roles/{role}`      | Назначить роль (идемпотентно)         | 2    | готово |
+| `DELETE /admin/users/{id}/roles/{role}`   | Снять роль (защита последнего админа) | 2    | готово |
+| `POST /admin/roles`                       | Создать роль                          | 2    | готово |
+| `GET /jwks`                               | Публичные ключи для гейтвея           | 4    | готово |
+| `POST /auth/login`                        | Логин, выдача токенов                 | 5    | план   |
+| `POST /auth/refresh`, `POST /auth/logout` | Refresh и выход                       | 6    | план   |
+| `/admin/rules`, `GET /rules`              | Управление правилами и выдача гейтвею | 7    | план   |
+| `POST /auth/token`                        | Client credentials для API-клиентов   | 8    | план   |
 
 Все `/admin/*` требуют заголовки `x-user-id` (UUID) и `x-user-roles` с ролью `admin`. Их проставляет гейтвей. Окончательные пути служебных эндпоинтов фиксирует [ADR-011](docs/adr/011-internal-endpoints.md).
 
 Единый формат ошибок: `{code, message, requestId, details}`, `requestId` совпадает с заголовком `X-Request-Id` ответа.
 
+## Наблюдаемость
+
+Метрики Prometheus отдаются по `/q/metrics`. Исходы логина считаются счётчиком
+`keymaster_auth_login_total` с меткой `result`:
+
+- `result="success"` — токены выданы;
+- `result="failure"` — неверные учётные данные или недопустимый формат логина/пароля.
+
+Ответы 429 (превышен лимит) и инфраструктурные ошибки (503, 5xx) в этот
+счётчик не попадают.
+
 ## План этапов
 
-| # | Этап | Статус |
-|---|---|---|
-| 1 | Каркас: слои, конфиг, ошибки, request-id, health | готово |
-| 2 | Принципалы, пароли, роли, аудит, bootstrap-админ | закрывается |
-| 3 | Ключи подписи: хранение, жизненный цикл, `kid` | следующий |
-| 4 | JWKS и контрактный тест на парсер гейтвея | план |
-| 5 | Логин, access-токен, защита от перебора | план |
-| 6 | Refresh, reuse detection, logout; блокировка и смена пароля. Чекпоинт: Keycloak в стенде заменён | план |
-| 7 | Роли и правила: схема, валидатор путей, `/rules`, аудит | план |
-| 8 | API-клиенты (client credentials) | план |
-| 9 | Ротация ключей в рабочем режиме | план |
-| 10 | Финал: интеграция в стенд, smoke, k6, hardening | план |
-| 11 | TOTP (опционально) | после 10 |
+| #  | Этап                                                                                             | Статус      |
+|----|--------------------------------------------------------------------------------------------------|-------------|
+| 1  | Каркас: слои, конфиг, ошибки, request-id, health                                                 | готово      |
+| 2  | Принципалы, пароли, роли, аудит, bootstrap-админ                                                 | закрывается |
+| 3  | Ключи подписи: хранение, жизненный цикл, `kid`                                                   | следующий   |
+| 4  | JWKS и контрактный тест на парсер гейтвея                                                        | план        |
+| 5  | Логин, access-токен, защита от перебора                                                          | план        |
+| 6  | Refresh, reuse detection, logout; блокировка и смена пароля. Чекпоинт: Keycloak в стенде заменён | план        |
+| 7  | Роли и правила: схема, валидатор путей, `/rules`, аудит                                          | план        |
+| 8  | API-клиенты (client credentials)                                                                 | план        |
+| 9  | Ротация ключей в рабочем режиме                                                                  | план        |
+| 10 | Финал: интеграция в стенд, smoke, k6, hardening                                                  | план        |
+| 11 | TOTP (опционально)                                                                               | после 10    |
 
 ## Запуск
 
@@ -110,18 +121,18 @@ export JWT_ISSUER_MASTER=http://keymaster JWT_AUDIENCE=gatekeeper
 
 ### Конфигурация (prod)
 
-| Переменная | Назначение |
-|---|---|
-| `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS` | Подключение к PostgreSQL |
-| `JWT_ISSUER_MASTER` | Значение `iss` в токенах |
-| `JWT_AUDIENCE` | Значение `aud`, должно совпадать с конфигом гейтвея |
-| `CONCURRENT_HASHES` | Лимит одновременных хэшей Argon2 (по умолчанию 4) |
-| `KEYMASTER_BOOTSTRAP_ADMIN_LOGIN`, `KEYMASTER_BOOTSTRAP_ADMIN_PASSWORD` | Первый администратор (`keymaster.bootstrap.admin.*`), создаётся только если нет ни одного активного админа |
-| `BOOTSTRAP_SIGNING_KEY_ENABLED` | Создание начального signing-ключа при старте (`keymaster.bootstrap.signing-key.enabled`, по умолчанию `true`); ключ создаётся только если в БД нет ни одного ключа |
-| `BOOTSTRAP_SIGNING_KEY_ALGORITHM` | Алгоритм создаваемого при бутстрапе signing-ключа (`keymaster.bootstrap.signing-key.algorithm`, по умолчанию `RS256`). Поддерживаются RS256, RS384, RS512, PS256, PS384, PS512, ES256, ES384, ES512 |
-| `KEYMASTER_MASTER_KEY` | Мастер-ключ шифрования приватных ключей, 32 байта в base64 (с этапа 3) |
-| `KEYMASTER_AUTH_LOGIN_IP_LIMIT_ENABLED` | IP-лимиты входа (`keymaster.auth.login.ip-limit.enabled`, по умолчанию `true`); отключать для нагрузочных тестов с одного IP |
-| `KEYMASTER_AUTH_LOGIN_*_LIMIT_MAX_ATTEMPTS`, `KEYMASTER_AUTH_LOGIN_*_LIMIT_WINDOW` | Пороги троттлинга входа (`keymaster.auth.login.*-limit.*`): IP 30/1 мин, логин 50/15 мин, пара IP+логин 5/5 мин |
+| Переменная                                                                         | Назначение                                                                                                                                                                                          |
+|------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`                                         | Подключение к PostgreSQL                                                                                                                                                                            |
+| `JWT_ISSUER_MASTER`                                                                | Значение `iss` в токенах                                                                                                                                                                            |
+| `JWT_AUDIENCE`                                                                     | Значение `aud`, должно совпадать с конфигом гейтвея                                                                                                                                                 |
+| `CONCURRENT_HASHES`                                                                | Лимит одновременных хэшей Argon2 (по умолчанию 4)                                                                                                                                                   |
+| `KEYMASTER_BOOTSTRAP_ADMIN_LOGIN`, `KEYMASTER_BOOTSTRAP_ADMIN_PASSWORD`            | Первый администратор (`keymaster.bootstrap.admin.*`), создаётся только если нет ни одного активного админа                                                                                          |
+| `BOOTSTRAP_SIGNING_KEY_ENABLED`                                                    | Создание начального signing-ключа при старте (`keymaster.bootstrap.signing-key.enabled`, по умолчанию `true`); ключ создаётся только если в БД нет ни одного ключа                                  |
+| `BOOTSTRAP_SIGNING_KEY_ALGORITHM`                                                  | Алгоритм создаваемого при бутстрапе signing-ключа (`keymaster.bootstrap.signing-key.algorithm`, по умолчанию `RS256`). Поддерживаются RS256, RS384, RS512, PS256, PS384, PS512, ES256, ES384, ES512 |
+| `KEYMASTER_MASTER_KEY`                                                             | Мастер-ключ шифрования приватных ключей, 32 байта в base64 (с этапа 3)                                                                                                                              |
+| `KEYMASTER_AUTH_LOGIN_IP_LIMIT_ENABLED`                                            | IP-лимиты входа (`keymaster.auth.login.ip-limit.enabled`, по умолчанию `true`); отключать для нагрузочных тестов с одного IP                                                                        |
+| `KEYMASTER_AUTH_LOGIN_*_LIMIT_MAX_ATTEMPTS`, `KEYMASTER_AUTH_LOGIN_*_LIMIT_WINDOW` | Пороги троттлинга входа (`keymaster.auth.login.*-limit.*`): IP 30/1 мин, логин 50/15 мин, пара IP+логин 5/5 мин                                                                                     |
 
 Значений по умолчанию для секретов в `%prod` нет: без них сервис не стартует.
 
@@ -137,20 +148,21 @@ export JWT_ISSUER_MASTER=http://keymaster JWT_AUDIENCE=gatekeeper
 
 Формат записи: контекст, решение, последствия. Файлы лежат в `docs/adr/`.
 
-| № | Решение | Статус |
-|---|---|---|
-| [001](docs/adr/001-stack-and-trust-boundary.md) | Стек (Quarkus 3.40 LTS, Java 25, реактивный, Flyway через JDBC) и граница доверия | принят |
-| [002](docs/adr/002-totp.md) | TOTP как опциональный второй фактор, после этапа 10 | черновик |
-| [003](docs/adr/003-login-identifier.md) | Идентификатор входа: username без почты, `sub` равен UUID принципала | принят |
-| [004](docs/adr/004-registration.md) | Регистрация только через админ-API; инвайт-коды позже | принят |
-| [005](docs/adr/005-password-hashing.md) | Хэширование паролей: Argon2id, параметры, ограниченный пул, политика пароля, нормализация | принят |
-| [006](docs/adr/006-principal-model.md) | Единая модель принципалов (user и client), `sub` равен UUID | принят |
-| [007](docs/adr/007-audit.md) | Аудит: append-only журнал, запись в одной транзакции с изменением, `target_id` как текст | принят |
-| [008](docs/adr/008-signing-key-storage.md) | Хранение приватных ключей: AES-256-GCM, мастер-ключ из env, AAD равен `kid` | принят, реализация в этапе 3 |
-| [009](docs/adr/009-key-lifecycle.md) | Жизненный цикл ключа: временные метки, предпубликация, единственный подписант | принят, реализация в этапе 3 |
-| [010](docs/adr/010-signing-algorithm.md) | Алгоритм подписи: RS256 (RSA 2048) | принят |
-| [011](docs/adr/011-internal-endpoints.md) | Служебные эндпоинты (`/jwks`, `/rules`) вне `/admin`, недоступны через гейтвей | предложен |
-| [012](docs/adr/012-bootstrap-admin.md) | Bootstrap-админ из env, идемпотентно, обязательная смена пароля | предложен |
+| №                                               | Решение                                                                                   | Статус                       |
+|-------------------------------------------------|-------------------------------------------------------------------------------------------|------------------------------|
+| [001](docs/adr/001-stack-and-trust-boundary.md) | Стек (Quarkus 3.40 LTS, Java 25, реактивный, Flyway через JDBC) и граница доверия         | принят                       |
+| [002](docs/adr/002-totp.md)                     | TOTP как опциональный второй фактор, после этапа 10                                       | черновик                     |
+| [003](docs/adr/003-login-identifier.md)         | Идентификатор входа: username без почты, `sub` равен UUID принципала                      | принят                       |
+| [004](docs/adr/004-registration.md)             | Регистрация только через админ-API; инвайт-коды позже                                     | принят                       |
+| [005](docs/adr/005-password-hashing.md)         | Хэширование паролей: Argon2id, параметры, ограниченный пул, политика пароля, нормализация | принят                       |
+| [006](docs/adr/006-principal-model.md)          | Единая модель принципалов (user и client), `sub` равен UUID                               | принят                       |
+| [007](docs/adr/007-audit.md)                    | Аудит: append-only журнал, запись в одной транзакции с изменением, `target_id` как текст  | принят                       |
+| [008](docs/adr/008-signing-key-storage.md)      | Хранение приватных ключей: AES-256-GCM, мастер-ключ из env, AAD равен `kid`               | принят, реализация в этапе 3 |
+| [009](docs/adr/009-key-lifecycle.md)            | Жизненный цикл ключа: временные метки, предпубликация, единственный подписант             | принят, реализация в этапе 3 |
+| [010](docs/adr/010-signing-algorithm.md)        | Алгоритм подписи: RS256 (RSA 2048)                                                        | принят                       |
+| [011](docs/adr/011-internal-endpoints.md)       | Служебные эндпоинты (`/jwks`, `/rules`) вне `/admin`, недоступны через гейтвей            | предложен                    |
+| [012](docs/adr/012-bootstrap-admin.md)          | Bootstrap-админ из env, идемпотентно, обязательная смена пароля                           | предложен                    |
+| [015](docs/adr/015-login-throttling.md)         | Троттлинг входа: IP, логин и пара (IP, логин), единая нормализация, TTL кэша от окон      | предложен                    |
 
 ### Открытые вопросы
 

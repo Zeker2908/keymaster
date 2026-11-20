@@ -46,14 +46,21 @@ public class PrincipalService {
     private final PasswordHasher hasher;
 
     public Uni<Subject> getByLogin(String login) {
-        log.info("Finding user '{}'", login);
+        String normalized = LoginNormalizer.normalize(login);
 
-        return Panache.withSession(() -> principals.findSubjectByLogin(login)
+        if (normalized == null) {
+            log.debug("Login has an invalid format");
+            return Uni.createFrom().nullItem();
+        }
+
+        log.info("Finding user '{}'", normalized);
+
+        return Panache.withSession(() -> principals.findSubjectByLogin(normalized)
                 .onItem().invoke(subject -> {
                     if (subject == null) {
-                        log.warn("User '{}' not found", login);
+                        log.warn("User '{}' not found", normalized);
                     } else {
-                        log.info("User '{}' found, id={}", login, subject.userId());
+                        log.info("User '{}' found, id={}", normalized, subject.userId());
                     }
                 }));
     }

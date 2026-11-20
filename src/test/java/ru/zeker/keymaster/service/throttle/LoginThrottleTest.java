@@ -1,5 +1,6 @@
 package ru.zeker.keymaster.service.throttle;
 
+import com.github.benmanes.caffeine.cache.Ticker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import ru.zeker.keymaster.config.LoginThrottleConfig;
@@ -32,6 +33,7 @@ class LoginThrottleTest {
     private static final String LOGIN = "admin";
 
     private MutableClock clock;
+    private LoginThrottleConfig config;
     private LoginThrottleConfig.IpLimit ipLimit;
     private LoginThrottleConfig.LoginLimit loginLimit;
     private LoginThrottleConfig.PairLimit pairLimit;
@@ -44,11 +46,12 @@ class LoginThrottleTest {
         loginLimit = mock(LoginThrottleConfig.LoginLimit.class);
         pairLimit = mock(LoginThrottleConfig.PairLimit.class);
 
-        LoginThrottleConfig config = mock(LoginThrottleConfig.class);
+        config = mock(LoginThrottleConfig.class);
         when(config.ipLimit()).thenReturn(ipLimit);
         when(config.loginLimit()).thenReturn(loginLimit);
         when(config.pairLimit()).thenReturn(pairLimit);
 
+        setLimits(100, Duration.ofMinutes(1), 100, Duration.ofMinutes(15), 100, Duration.ofMinutes(5));
         throttle = new LoginThrottle(config, clock);
     }
 
@@ -248,6 +251,52 @@ class LoginThrottleTest {
         assertNotNull(exception.getRetryAfter());
     }
 
+    @Test
+    void pairLimitStillAppliesWhenIpLimitIsDisabled() {
+        setLimits(100, Duration.ofMinutes(1), 100, Duration.ofMinutes(15), 1, Duration.ofMinutes(5));
+        when(ipLimit.enabled()).thenReturn(false);
+
+        throttle.acquire(IP, LOGIN);
+
+        KeyMasterException exception = assertThrows(
+                KeyMasterException.class,
+                () -> throttle.acquire(IP, LOGIN)
+        );
+
+        assertEquals(ErrorCode.TOO_MANY_REQUESTS, exception.getCode());
+    }
+
+    @Test
+    void cacheOutlivesLongestConfiguredWindow() {
+        setLimits(100, Duration.ofMinutes(1), 1, Duration.ofMinutes(30), 100, Duration.ofMinutes(5));
+
+        MutableTicker ticker = new MutableTicker();
+        throttle = new LoginThrottle(config, clock, ticker);
+
+        throttle.acquire(IP, LOGIN);
+
+        clock.advance(Duration.ofMinutes(20));
+        ticker.advance(Duration.ofMinutes(20));
+
+        KeyMasterException exception = assertThrows(
+                KeyMasterException.class,
+                () -> throttle.acquire(IP, LOGIN)
+        );
+
+        assertEquals(ErrorCode.TOO_MANY_REQUESTS, exception.getCode());
+        assertEquals(Duration.ofMinutes(10), exception.getRetryAfter());
+    }
+
+    @Test
+    void rejectsNonPositiveWindowAtStartup() {
+        when(ipLimit.enabled()).thenReturn(true);
+        when(ipLimit.window()).thenReturn(Duration.ZERO);
+        when(loginLimit.window()).thenReturn(Duration.ofMinutes(15));
+        when(pairLimit.window()).thenReturn(Duration.ofMinutes(5));
+
+        assertThrows(IllegalStateException.class, () -> new LoginThrottle(config, clock));
+    }
+
     private void setLimits(
             int ipAttempts,
             Duration ipWindow,
@@ -265,6 +314,20 @@ class LoginThrottleTest {
 
         when(pairLimit.maxAttempts()).thenReturn(pairAttempts);
         when(pairLimit.window()).thenReturn(pairWindow);
+    }
+
+    private static final class MutableTicker implements Ticker {
+
+        private long nanos;
+
+        @Override
+        public long read() {
+            return nanos;
+        }
+
+        void advance(Duration duration) {
+            nanos += duration.toNanos();
+        }
     }
 
     private static final class MutableClock extends Clock {

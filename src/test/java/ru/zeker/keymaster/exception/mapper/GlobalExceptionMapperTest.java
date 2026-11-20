@@ -36,6 +36,32 @@ class GlobalExceptionMapperTest {
     }
 
     @Test
+    void setsAtLeastOneSecondRetryAfterForZeroDuration() {
+        UriInfo uriInfo = uriInfo();
+        GlobalExceptionMapper mapper = mapperFor(429, uriInfo);
+
+        Response response = mapper.handleKeyMaster(
+                new TooManyRequestsException(Duration.ZERO),
+                uriInfo
+        );
+
+        assertEquals("1", response.getHeaderString("Retry-After"));
+    }
+
+    @Test
+    void roundsSubSecondRetryAfterUpToOneSecond() {
+        UriInfo uriInfo = uriInfo();
+        GlobalExceptionMapper mapper = mapperFor(429, uriInfo);
+
+        Response response = mapper.handleKeyMaster(
+                new TooManyRequestsException(Duration.ofMillis(1)),
+                uriInfo
+        );
+
+        assertEquals("1", response.getHeaderString("Retry-After"));
+    }
+
+    @Test
     void setsDefaultRetryAfterHeaderForOverloadedService() {
         UriInfo uriInfo = uriInfo();
         GlobalExceptionMapper mapper = mapperFor(503, uriInfo);

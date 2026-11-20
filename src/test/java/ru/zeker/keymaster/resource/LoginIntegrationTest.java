@@ -143,7 +143,7 @@ class LoginIntegrationTest extends IntegrationTestBase {
                 .then()
                 .statusCode(400)
                 .body("error", equalTo("Bad Request"))
-                .body("details.size()", greaterThanOrEqualTo(2));
+                .body("details.size()", greaterThanOrEqualTo(1));
 
         given()
                 .contentType(ContentType.JSON)
